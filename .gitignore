@@ -1,0 +1,28 @@
+# colcon / ROS2
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.ipynb_checkpoints/
+
+# Editor
+.vscode/
+
+# Logs
+*.log
+
+
+# ML weights / datasets
+*.pt
+*.onnx
+*.engine
+*.tflite
+
+# Maps / slam artifacts
+*.pbstream
+
