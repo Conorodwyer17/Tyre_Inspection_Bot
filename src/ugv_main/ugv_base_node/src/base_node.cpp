@@ -104,8 +104,15 @@ public:
         imu_subscription_ = this->create_subscription<sensor_msgs::msg::Imu>("imu/data", 5, std::bind(&OdomPublisher::handle_imu, this, _1));
         odom_raw_subscription_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("odom/odom_raw", 50, std::bind(&OdomPublisher::handle_odom, this, _1));
 
-        // Publisher for odometry messages
-        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 5);
+        // CRITICAL: Publisher for odometry messages with RELIABLE QoS
+        // Movement verification depends on accurate odometry - messages must not be dropped
+        // RELIABLE + TRANSIENT_LOCAL ensures subscribers get all messages even if they connect late
+        odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(
+            "odom",
+            rclcpp::QoS(rclcpp::KeepLast(20))
+                .reliable()
+                .transient_local()
+        );
 
         // Timer to publish odometry data periodically
         timer_ = this->create_wall_timer(100ms, std::bind(&OdomPublisher::publish_odom, this));

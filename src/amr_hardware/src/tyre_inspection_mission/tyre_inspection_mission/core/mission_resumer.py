@@ -151,12 +151,20 @@ class MissionResumer:
                 # Map state string to enum
                 from tyre_inspection_mission.core.mission_controller import MissionState
                 try:
-                    # Find matching state
-                    for state_enum in MissionState:
-                        if state_enum.value == current_state:
-                            mission_controller.state = state_enum
-                            self.logger.info(f"Restored mission state: {current_state}")
-                            break
+                    # CRITICAL: Don't restore IDLE or MISSION_COMPLETE states
+                    if current_state in [MissionState.IDLE.value, MissionState.MISSION_COMPLETE.value, 'idle', 'mission_complete']:
+                        self.logger.warn(
+                            f"⚠️ Cannot resume to inactive state '{current_state}'. "
+                            "This should have been caught earlier. Not restoring state."
+                        )
+                        result['issues'].append(f"Cannot resume to inactive state: {current_state}")
+                    else:
+                        # Find matching state
+                        for state_enum in MissionState:
+                            if state_enum.value == current_state:
+                                mission_controller.state = state_enum
+                                self.logger.info(f"Restored mission state: {current_state}")
+                                break
                 except Exception as e:
                     result['issues'].append(f"Error restoring state: {e}")
             

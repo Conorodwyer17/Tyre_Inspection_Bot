@@ -70,22 +70,27 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: false
-    ontroller_frequency: 20.0
-    min_x_velocity_threshold: 0.001
+    controller_frequency: 20.0  # Fixed typo: was "ontroller_frequency"
+    # CRITICAL FIX: Hardware deadzone equivalent in m/s = 0.026 m/s (0.01 PWM * 1.3 m/s / 0.5)
+    # Nav2 can still publish commands below this, but they'll be clamped to zero by ugv_bringup
+    # Using 0.039 m/s (1.5x margin) to account for variations and ensure Nav2 respects hardware limits
+    min_x_velocity_threshold: 0.039  # CRITICAL: Must be >= hardware deadzone equivalent (0.026 m/s)
     min_y_velocity_threshold: 0.5
-    min_theta_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.026  # CRITICAL: Angular deadzone equivalent (same calculation as linear)
     progress_checker_plugin: "progress_checker"
     goal_checker_plugin: "goal_checker"
     controller_plugins: ["FollowPath"]
-    # Progress checker parameters
+    # Progress checker parameters - EXTREMELY LENIENT to prevent false "stuck" detection
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
-      movement_time_allowance: 10.0
+      required_movement_radius: 0.1  # CRITICAL: Decreased to 0.1m - robot only needs to move 10cm to show progress
+      movement_time_allowance: 30.0  # CRITICAL: Increased to 30s - give robot plenty of time to make progress
     # Goal checker parameters
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.3  # Increased from 0.25 to 0.3m for easier goal reaching
+      # CRITICAL: Reduced from 0.4m to 0.15m to prevent premature goal reached detection
+      # Must match direct control goal_tolerance and mission controller arrival_threshold
+      xy_goal_tolerance: 0.15  # Reduced from 0.4m to 0.15m for accurate goal detection
       yaw_goal_tolerance: 0.25
       stateful: True
     # DWB parameters
@@ -98,8 +103,9 @@ controller_server:
       max_angular_accel: 3.2
       simulate_ahead_time: 1.0
       debug_trajectory_details: True
-      min_vel_x: 0.0
+      min_vel_x: 0.0  # Allow zero velocity (stopping is OK)
       min_vel_y: 0.0
+      min_speed_xy: 0.0  # Allow zero speed - critical for slow movement
       max_vel_x: 0.8  # Increased from 0.26 to 0.8 m/s (60% of max 1.3 m/s for safety)
       max_vel_y: 0.0
       max_vel_theta: 1.0  # Increased from 0.5 to 1.0 rad/s for faster rotation
@@ -114,19 +120,20 @@ controller_server:
       decel_lim_x: -2.5
       decel_lim_y: 0.0
       decel_lim_theta: -3.2
-      vx_samples: 20
-      vy_samples: 5
-      vtheta_samples: 40
-      sim_time: 1.5
-      linear_granularity: 0.05
-      angular_granularity: 0.025
+      # CRITICAL: Increased trajectory samples for better path finding
+      vx_samples: 40          # Increased from 20 to 40 - more linear velocity options
+      vy_samples: 5           # Keep at 5
+      vtheta_samples: 60      # Increased from 40 to 60 - more rotational options
+      sim_time: 2.0           # Increased from 1.5 to 2.0s - longer lookahead for obstacle prediction
+      linear_granularity: 0.03  # Decreased from 0.05 to 0.03 - smoother linear trajectories
+      angular_granularity: 0.02 # Decreased from 0.025 to 0.02 - smoother angular trajectories
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.3  # Increased from 0.25 to 0.3m for easier goal reaching
+      xy_goal_tolerance: 0.4   # Increased from 0.3 to 0.4m - easier goal reaching
       trans_stopped_velocity: 0.25
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.02
+      BaseObstacle.scale: 0.015  # Decreased from 0.02 - less penalty for obstacles, allows closer navigation
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
       GoalAlign.scale: 24.0
@@ -144,7 +151,7 @@ local_costmap:
       update_frequency: 5.0
       publish_frequency: 2.0
       global_frame: odom
-      robot_base_frame: base_link
+      robot_base_frame: base_footprint  # CRITICAL: Must match odometry child_frame_id for consistency
       use_sim_time: False
       rolling_window: true
       width: 5
@@ -154,8 +161,8 @@ local_costmap:
       plugins: ["obstacle_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.35  # Reduced from 0.55 to 0.35m to allow closer navigation
+        cost_scaling_factor: 2.5  # Decreased from 3.0 - gentler cost scaling
+        inflation_radius: 0.25     # Decreased from 0.35 to 0.25m - allows navigation closer to obstacles
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -182,7 +189,7 @@ global_costmap:
       update_frequency: 1.0
       publish_frequency: 1.0
       global_frame: map
-      robot_base_frame: base_link
+      robot_base_frame: base_footprint  # CRITICAL: Must match odometry child_frame_id for consistency
       use_sim_time: False
       robot_radius: 0.1
       resolution: 0.05

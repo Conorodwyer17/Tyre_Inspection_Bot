@@ -270,18 +270,67 @@ def generate_launch_description():
             'use_respawn': 'False'
         }.items()
     )
+    # CRITICAL: Use custom Nav2 navigation launch that remaps controller cmd_vel output
+    # Nav2's controller publishes to /cmd_vel by default, which conflicts with our multiplexer.
+    # This custom launch remaps it to /cmd_vel/nav2 so the multiplexer can handle it as Priority 3.
+    # 
+    # REMAPPING: controller_server, behavior_server, and velocity_smoother all publish cmd_vel.
+    # They are remapped from /cmd_vel to /cmd_vel/nav2 so the multiplexer receives them as Priority 3.
     nav2_navigation_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(nav2_bringup_pkg, 'launch', 'navigation_launch.py')
+            os.path.join(tyre_inspection_pkg, 'launch', 'nav2_navigation_with_remap.launch.py')
         ),
         condition=IfCondition(LaunchConfiguration('use_mapping_nav')),
         launch_arguments={
             'use_sim_time': 'False',
             'autostart': 'True',
-            'params_file': nav2_params,
+            'params_file': nav2_params,  # Pass the params file path as a string
             'use_composition': 'False',
-            'use_respawn': 'False'
+            'use_respawn': 'False',
+            'namespace': '',
+            'use_namespace': 'false',
+            'log_level': 'info',
         }.items()
+    )
+    
+    # CRITICAL: cmd_vel_multiplexer - Priority-based command arbitration
+    # MUST start BEFORE any nodes that publish to priority topics
+    # This node arbitrates between multiple cmd_vel sources and publishes highest-priority command
+    # CRITICAL: cmd_vel_multiplexer - MUST have respawn=True to auto-restart if crashes
+    # This node is CRITICAL for robot movement - if it dies, robot cannot move
+    cmd_vel_multiplexer_node = Node(
+        package='tyre_inspection_mission',
+        executable='cmd_vel_multiplexer',
+        name='cmd_vel_multiplexer',
+        output='screen',
+        respawn=True,  # CRITICAL: Auto-restart if crashes (robot cannot move without this node)
+        respawn_delay=2.0,  # Wait 2 seconds before restarting
+        parameters=[{
+            'use_sim_time': False,  # CRITICAL: Must be boolean, not string
+        }]
+    )
+    
+    # CRITICAL FIX: Nav2's cmd_vel output is remapped to /cmd_vel/nav2 via nav2_navigation_with_remap.launch.py
+    # The remapping uses absolute topic names ('/cmd_vel' -> '/cmd_vel/nav2') to ensure proper remapping.
+    # The multiplexer subscribes to /cmd_vel/nav2 as Priority 3 and arbitrates correctly.
+    # No conflicts - Nav2 commands are handled by multiplexer as Priority 3.
+    #
+    # NOTE: nav2_cmd_vel_relay node is OBSOLETE and not needed - remapping handles it directly.
+    # The relay was previously attempted but created a feedback loop and has been removed.
+    
+    # Movement diagnostic node - CRITICAL: Monitors cmd_vel and robot movement
+    # CRITICAL: movement_diagnostic - Add respawn=True to auto-restart if crashes
+    # This node is useful for diagnostics but not critical for robot movement
+    movement_diagnostic_node = Node(
+        package='tyre_inspection_mission',
+        executable='movement_diagnostic',
+        name='movement_diagnostic',
+        output='screen',
+        respawn=True,  # Auto-restart if crashes (helpful for diagnostics)
+        respawn_delay=2.0,  # Wait 2 seconds before restarting
+        parameters=[{
+            'use_sim_time': False,  # CRITICAL: Must be boolean, not string
+        }]
     )
     
     # Photo capture service
@@ -311,6 +360,7 @@ def generate_launch_description():
             'photo_capture_timeout': 10.0,  # seconds
             'vehicle_class_names': ['truck', 'car'],  # List of vehicle types to detect
             'tyre_class_name': 'tyre',
+            'license_plate_class_name': 'license_plate',  # NEW: Direct license plate detection class
             'bounding_boxes_topic': '/darknet_ros_3d/bounding_boxes',  # Must match segmentation_processor output
             'navigation_frame': 'map'  # Frame for navigation: 'map' (with Nav2/SLAM) or 'odom' (without Nav2)
         }],
@@ -346,6 +396,7 @@ def generate_launch_description():
     )
     
     return LaunchDescription([
+        # Launch arguments
         use_nav2_arg,
         use_rviz_arg,
         use_mapping_nav_arg,
@@ -354,24 +405,26 @@ def generate_launch_description():
         ugv_port_arg,
         ugv_baud_arg,
         lidar_port_arg,
+        # CRITICAL: cmd_vel_multiplexer MUST start FIRST (before any nodes that publish cmd_vel)
+        cmd_vel_multiplexer_node,
+        # Camera and hardware nodes
         camera_launch,
-        camera_recovery_node,  # Camera recovery service - auto-recovers from boot failures
-        # Hardware driver nodes - REQUIRED for rover movement
-        # ugv_bringup handles both reading sensor feedback AND sending velocity commands
-        # ugv_driver is commented out - uncomment if you need joint states or LED control
+        camera_recovery_node,
         ugv_bringup_node,
-        # ugv_driver_node,  # Uncomment if you need joint states or LED control
         imu_filter_node,
         base_node,
+        # Navigation stack (SLAM + Nav2)
         ldlidar_launch,
         rf2o_launch,
         robot_description_launch,
         nav2_slam_launch,
-        nav2_navigation_launch,
+        nav2_navigation_launch,  # CRITICAL: Custom launch remaps Nav2's cmd_vel to /cmd_vel/nav2
+        # Vision pipeline
         point_cloud_node,
         segmentation_launch,
+        # Mission control nodes
         photo_capture_node,
+        movement_diagnostic_node,  # CRITICAL: Diagnostic monitoring
         mission_controller_node,
         detection_visualizer_node,
-        # nav2_launch,  # Uncomment if you want Nav2 included
     ])

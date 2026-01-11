@@ -29,7 +29,9 @@ class JoyTeleop(Node):
 		
 		#create pub
 		self.pub_goal = self.create_publisher(GoalID,"move_base/cancel",10)
-		self.pub_cmdVel = self.create_publisher(Twist,'cmd_vel',  10)
+		# CRITICAL: Publish to /cmd_vel/teleop (Priority 4) instead of /cmd_vel directly
+		# The cmd_vel_multiplexer will arbitrate and publish final /cmd_vel
+		self.pub_cmdVel = self.create_publisher(Twist,'/cmd_vel/teleop',  10)
 		self.pub_Buzzer = self.create_publisher(Bool,"Buzzer",  1)
 		self.pub_JoyState = self.create_publisher(Bool,"JoyState",  10)
 		self.pub_RGBLight = self.create_publisher(Int32,"RGBLight" , 10)

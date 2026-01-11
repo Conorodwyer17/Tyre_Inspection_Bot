@@ -45,6 +45,10 @@ setup(
             'save_annotated_images = tyre_inspection_mission.scripts.save_annotated_images:main',
             'image_http_server = tyre_inspection_mission.scripts.image_http_server:main',
             'camera_recovery = tyre_inspection_mission.diagnostics.camera_recovery:main',
+            'movement_diagnostic = tyre_inspection_mission.diagnostics.movement_diagnostic:main',
+            'command_effectiveness_monitor = tyre_inspection_mission.diagnostics.command_effectiveness_monitor:main',
+            'cmd_vel_multiplexer = tyre_inspection_mission.navigation.cmd_vel_multiplexer:main',
+            'nav2_cmd_vel_relay = tyre_inspection_mission.navigation.nav2_cmd_vel_relay:main',
         ],
     },
 )

@@ -63,8 +63,9 @@ class ugv_Keyboard(Node):
 	def __init__(self,name):
 		# Initialize the node
 		super().__init__(name)
-		# Create a publisher to publish the Twist message
-		self.pub = self.create_publisher(Twist,'cmd_vel',1)
+		# CRITICAL: Publish to /cmd_vel/teleop (Priority 4) instead of /cmd_vel directly
+		# The cmd_vel_multiplexer will arbitrate and publish final /cmd_vel
+		self.pub = self.create_publisher(Twist,'/cmd_vel/teleop',1)
 		# Declare parameters for linear and angular speed limits
 		self.declare_parameter("linear_speed_limit",1.0)
 		self.declare_parameter("angular_speed_limit",1.0)

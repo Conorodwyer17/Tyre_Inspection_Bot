@@ -15,4 +15,5 @@ segmentation_processor_node:
     minimum_probability: 0.35
     # interested_classes: ["orange","traffic light","chair","bottle","person", "italian_biscotti", "smoothie", "mango_juice", "crisps", "water", "sandwich", "toastie", "veggie_pot", "wrap", "espresso", "cappuccino", "americano","cup","table","bottle"]
     # Include both spellings to avoid model label mismatches (COCO uses "tire", custom models may use "tyre")
-    interested_classes: ["person","truck", "car", "tire", "tyre"]
+    # Added "license_plate" for direct license plate detection (more reliable than estimation)
+    interested_classes: ["person","truck", "car", "tire", "tyre", "license_plate"]

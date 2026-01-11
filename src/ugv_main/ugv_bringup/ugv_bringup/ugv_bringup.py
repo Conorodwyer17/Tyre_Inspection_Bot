@@ -138,15 +138,14 @@ class BaseController:
             self.logger.error(f"BaseController: Failed to open serial port {uart_dev_set}: {e}")
             raise
         self.rl = ReadLine(self.ser)  # Initialize ReadLine helper
-        # Initialize command queue and thread for async command processing
-        # This allows non-blocking command sending while feedback loop runs
-        # CRITICAL: Initialize command queue and thread BEFORE any commands are sent
-        # This was a bug fix - queue must exist when send_command() is called
-        # DO NOT REMOVE - send_command() will fail with AttributeError if this is missing
-        self.command_queue = queue.Queue()  # Command queue for sending data
+        # Initialize command processing for async command sending
+        # CRITICAL: For real-time control, we must keep only the LATEST command, not queue all commands
+        # Queuing all commands causes lag - robot executes old commands instead of latest
+        # Use a queue with maxsize=1 and non-blocking put to always keep latest command
+        self.command_queue = queue.Queue(maxsize=1)  # Keep only latest command (drop old ones)
         self.command_thread = threading.Thread(target=self.process_commands, daemon=True)
         self.command_thread.start()
-        self.logger.info("BaseController: Command processing thread started")
+        self.logger.info("BaseController: Command processing thread started (latest-command only)")
         self.data_buffer = None  # Buffer for holding received data
         # Base data structure to hold sensor values
         self.base_data = {"T": 1001, "L": 0, "R": 0, "ax": 0, "ay": 0, "az": 0, "gx": 0, "gy": 0, "gz": 0, "mx": 0, "my": 0, "mz": 0, "odl": 0, "odr": 0, "v": 0}
@@ -282,9 +281,32 @@ class BaseController:
         data_read = json.loads(self.rl.readline().decode('utf-8'))  # Read and parse JSON data
         return data_read
 
-    # Add a command to the queue to be sent via UART (legacy method)
+    # Add a command to the queue to be sent via UART
+    # CRITICAL: For real-time control, we must keep only the LATEST command
+    # If a command is already queued (queue full), drop it and add the new one
+    # This ensures robot always executes the latest command, not old queued ones
     def send_command(self, data):
-        self.command_queue.put(data)
+        try:
+            # Try to put without blocking - if queue is full, drop old command and add new one
+            self.command_queue.put_nowait(data)
+        except queue.Full:
+            # Queue is full (old command not yet processed) - drop old, add new
+            try:
+                _ = self.command_queue.get_nowait()  # Remove old command
+                self.command_queue.put_nowait(data)  # Add new (latest) command
+                if self.use_ros_logger:
+                    self.logger.debug(
+                        "Dropped old queued command (queue full) - keeping latest only for real-time control",
+                        throttle_duration_sec=1.0
+                    )
+            except queue.Empty:
+                # Queue became empty between checks (race condition) - just add new command
+                try:
+                    self.command_queue.put_nowait(data)
+                except queue.Full:
+                    # Should never happen, but handle gracefully
+                    if self.use_ros_logger:
+                        self.logger.warn("Command queue full after clearing - this should not happen")
     
     # Direct write method (like ugv_driver.py) - writes immediately without queue
     def write_command_direct(self, data):
@@ -321,14 +343,39 @@ class BaseController:
             return 0
 
     # Thread function to process and send commands from the queue
+    # CRITICAL: This processes commands sequentially, keeping only the latest command
+    # If commands arrive faster than they can be sent, old ones are dropped (latest kept)
     def process_commands(self):
         if self.use_ros_logger:
             self.logger.info("[BaseController] process_commands thread is running and waiting for commands")
         else:
             self.logger.info("[BaseController] process_commands thread is running and waiting for commands")
+        
+        last_send_time = time.time()
+        commands_sent = 0
+        commands_dropped = 0
+        
         while True:
             try:
                 data = self.command_queue.get()  # Get command from the queue (blocks until command available)
+                current_time = time.time()
+                
+                # Track command rate for diagnostics (log every 100 commands)
+                commands_sent += 1
+                elapsed = current_time - last_send_time
+                if commands_sent % 100 == 0 or elapsed >= 10.0:  # Log every 100 commands or every 10 seconds
+                    rate = commands_sent / elapsed if elapsed > 0 else 0
+                    if self.use_ros_logger:
+                        self.logger.info(
+                            f"[BaseController] Command processing rate: {rate:.1f} Hz (sent {commands_sent} commands in {elapsed:.1f}s)",
+                            throttle_duration_sec=5.0
+                        )
+                    else:
+                        self.logger.info(
+                            f"[BaseController] Command processing rate: {rate:.1f} Hz (sent {commands_sent} commands in {elapsed:.1f}s)"
+                        )
+                    commands_sent = 0
+                    last_send_time = current_time
                 # Format JSON exactly like ugv_driver.py does - match the exact format
                 cmd_json = json.dumps(data) + '\n'
                 cmd_bytes = cmd_json.encode("utf-8")
@@ -436,13 +483,22 @@ class ugv_bringup(Node):
             self.get_logger().error(f"ugv_bringup: Failed to initialize BaseController on {serial_port}: {e}")
             raise
         # Subscribe to velocity commands (cmd_vel topic) - REQUIRED for rover movement
+        # CRITICAL: Use RELIABLE QoS to match cmd_vel_multiplexer's output
+        # This ensures guaranteed message delivery to hardware driver
+        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
+        cmd_vel_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,  # Match multiplexer's RELIABLE QoS
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,  # Match multiplexer's TRANSIENT_LOCAL
+            history=HistoryPolicy.KEEP_LAST,
+            depth=20  # Match multiplexer's depth
+        )
         self.cmd_vel_subscription_ = self.create_subscription(
             Twist, 
             "cmd_vel", 
             self.cmd_vel_callback, 
-            10
+            cmd_vel_qos  # Use RELIABLE QoS to match multiplexer
         )
-        self.get_logger().info("ugv_bringup: Subscribed to /cmd_vel topic")
+        self.get_logger().info("ugv_bringup: Subscribed to /cmd_vel topic with RELIABLE QoS (matches multiplexer)")
         
         # Subscribe to LED control commands (ugv/led_ctrl topic)
         # IO4 controls light near OAK camera, IO5 controls light near USB camera
@@ -648,11 +704,43 @@ class ugv_bringup(Node):
         left_wheel_speed = max(MIN_PWM_COMMAND, min(MAX_PWM_COMMAND, left_wheel_speed))
         right_wheel_speed = max(MIN_PWM_COMMAND, min(MAX_PWM_COMMAND, right_wheel_speed))
         
-        # DEBUG: Log intermediate values to verify scaling
+        # CRITICAL: Hardware deadzone enforcement
+        # ESP32 firmware has a deadzone - commands below ~0.01 PWM are ignored by hardware
+        # CRITICAL FIX: Clamp commands below deadzone to ZERO to prevent false "moving" state
+        # If we send commands below deadzone, ESP32 ignores them but cmd_vel is "non-zero"
+        # This causes movement guarantee to think robot is "moving" when it's actually stopped
+        MIN_EFFECTIVE_PWM = 0.01  # Minimum PWM that ESP32 responds to (hardware deadzone threshold)
+        
+        # Store original values for logging (before clamping)
+        original_left = left_wheel_speed
+        original_right = right_wheel_speed
+        
+        # Check if commands will be clamped (for logging)
+        was_left_clamped = abs(left_wheel_speed) > 0.0 and abs(left_wheel_speed) < MIN_EFFECTIVE_PWM
+        was_right_clamped = abs(right_wheel_speed) > 0.0 and abs(right_wheel_speed) < MIN_EFFECTIVE_PWM
+        was_clamped = was_left_clamped or was_right_clamped
+        
+        # CRITICAL: Clamp commands below deadzone to zero
+        # This ensures: 1) We don't send useless commands, 2) Zero cmd_vel = true stop state
+        if abs(left_wheel_speed) < MIN_EFFECTIVE_PWM:
+            left_wheel_speed = 0.0
+        if abs(right_wheel_speed) < MIN_EFFECTIVE_PWM:
+            right_wheel_speed = 0.0
+        if was_clamped and (abs(linear_velocity) > 0.0001 or abs(angular_velocity) > 0.0001):
+            # Command was non-zero but below deadzone - clamped to zero
+            self.get_logger().warn(
+                f"⚠️ DEADZONE CLAMP: cmd_vel linear={linear_velocity:.4f} m/s, angular={angular_velocity:.4f} rad/s "
+                f"→ scaled to L={original_left:.6f}, R={original_right:.6f} PWM (below {MIN_EFFECTIVE_PWM} deadzone) "
+                f"→ CLAMPED TO ZERO. ESP32 would ignore, so sending explicit stop instead.",
+                throttle_duration_sec=2.0
+            )
+        
+        # DEBUG: Log intermediate values to verify scaling (throttled to avoid spam)
         self.get_logger().debug(
-            f"Scaling calculation: left_ms={left_wheel_speed_ms:.4f}, right_ms={right_wheel_speed_ms:.4f}, "
-            f"max_speed={MAX_ROBOT_SPEED_MPS}, scaled_left={left_wheel_speed:.4f}, scaled_right={right_wheel_speed:.4f}",
-            throttle_duration_sec=2.0
+            f"Scaling: cmd_vel linear={linear_velocity:.4f}, angular={angular_velocity:.4f} → "
+            f"L_ms={left_wheel_speed_ms:.4f}, R_ms={right_wheel_speed_ms:.4f} → "
+            f"L_PWM={left_wheel_speed:.6f}, R_PWM={right_wheel_speed:.6f}",
+            throttle_duration_sec=5.0
         )
 
         # Send the wheel speed data using T:1 format (direct wheel speed control)
@@ -677,9 +765,11 @@ class ugv_bringup(Node):
             self.last_cmd_vel = cmd_data
             # Log at INFO level with throttling to verify commands are being received and sent
             # CRITICAL: This log confirms cmd_vel callback is working - if you don't see this, cmd_vel isn't being received
+            # Include clamping info if commands were clamped
+            clamp_note = " (clamped from below deadzone)" if was_clamped else ""
             self.get_logger().info(
                 f"✅ Received cmd_vel: linear={linear_velocity:.3f} m/s, angular={angular_velocity:.3f} rad/s -> "
-                f"Converted to T:1 command: L={left_wheel_speed:.3f}, R={right_wheel_speed:.3f}",
+                f"T:1 command: L={left_wheel_speed:.3f}, R={right_wheel_speed:.3f}{clamp_note}",
                 throttle_duration_sec=1.0
             )
         except Exception as e:

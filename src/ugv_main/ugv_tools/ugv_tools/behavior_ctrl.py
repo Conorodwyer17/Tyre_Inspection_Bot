@@ -28,8 +28,9 @@ class BehaviorController(Node):
         self.create_subscription(PoseStamped, '/robot_pose', self.robot_pose_callback, 10) 
         # Create an action server to handle the behavior action
         self.behavior_action_server = ActionServer(self, Behavior, 'behavior', self.execute_callback)
-        # Create a publisher to the /cmd_vel topic to send velocity commands to the robot
-        self.velocity_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        # CRITICAL: Publish to /cmd_vel/teleop (Priority 4) instead of /cmd_vel directly
+        # The cmd_vel_multiplexer will arbitrate and publish final /cmd_vel
+        self.velocity_publisher = self.create_publisher(Twist, '/cmd_vel/teleop', 10)
         # Create a publisher to the /goal_pose topic to send goal poses to the robot
         self.goal_publisher = self.create_publisher(PoseStamped, '/goal_pose', 10)
         # Initialize the distance and yaw variables

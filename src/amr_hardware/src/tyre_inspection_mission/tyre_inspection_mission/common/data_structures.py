@@ -233,6 +233,10 @@ class VehicleData:
         self.license_plate_position_nav: Optional[PoseStamped] = None
         self.license_plate_bbox_2d: Optional[tuple] = None
         
+        # NEW: Direct license plate detection (from YOLO)
+        self.license_plate_pose: Optional[PoseStamped] = None  # Actual detected position in nav frame
+        self.license_plate_detected: bool = False  # Was license plate detected directly?
+        
         # Tyre data
         self.tyres: List[TyreData] = []
         self.detection_timestamp: float = time.time()
