@@ -1,216 +1,98 @@
-# Autonomous Tyre Inspection Robot - Complete Project
+# Autonomous Vehicle Tire Inspection System
 
-## 🚀 Quick Start
+**Production-Ready Implementation for Waveshare UGV (Jetson Orin)**
 
-### Launch the System
+## Overview
+
+This workspace implements an autonomous system for detecting vehicles (cars and trucks) and photographing each tire. The system uses:
+
+- **ROS2 Humble** for middleware and communication
+- **YOLOv8** for vehicle detection
+- **Nav2** for autonomous navigation
+- **SLAM Toolbox** for mapping and localization
+- **Python 3.10+** for perception and mission management
+
+## Quick Start
+
+### 1. Environment Setup
+
 ```bash
-ros2 launch tyre_inspection_mission autonomous_inspection.launch.py
+# Source ROS2
+source /opt/ros/humble/setup.bash
+
+# Install dependencies
+sudo apt update
+sudo apt install -y python3-pip python3-colcon-common-extensions
+pip3 install -r requirements.txt
+
+# Build workspace
+cd /home/jetson/ugv_ws
+colcon build --symlink-install
+source install/setup.bash
 ```
 
-### Start Mission
+### 2. System Architecture
+
+The system consists of several ROS2 packages:
+
+- **ugv_msgs**: Custom message definitions
+- **ugv_perception**: Vehicle detection and wheel localization
+- **ugv_mission**: Mission management and state machine
+- **ugv_inspection**: Image capture and storage
+- **ugv_nav**: Navigation stack (existing)
+- **ugv_vision**: Vision utilities (existing)
+- **ugv_slam**: SLAM tools (existing)
+
+### 3. Running the System
+
+See **CONSTRUCTION_DOCUMENT.md** for detailed setup instructions.
+
+Quick launch:
 ```bash
-ros2 service call /mission_controller/start std_srvs/srv/Trigger
+ros2 launch ugv_inspection vehicle_inspection_bringup.launch.py
 ```
 
-### Check System Health
-```bash
-ros2 run tyre_inspection_mission diagnostic_check
-```
+## Documentation
 
-### Monitor Mission (Real-time)
-```bash
-# Terminal 1: Launch system
-ros2 launch tyre_inspection_mission autonomous_inspection.launch.py
+- **CONSTRUCTION_DOCUMENT.md**: Complete construction guide with step-by-step instructions
+- **docs/**: Additional documentation (to be added)
 
-# Terminal 2: Start monitor
-ros2 run tyre_inspection_mission mission_monitor
-
-# Terminal 3: View status
-ros2 run tyre_inspection_mission mission_status
-```
-
-### Monitor Mission (One-time)
-```bash
-ros2 topic echo /mission_controller/status --once
-```
-
----
-
-## 📚 Documentation
-
-### 🚨 Troubleshooting
-- **[Quick Reference](docs/troubleshooting/QUICK_REFERENCE.md)** - Fast lookup for common issues
-- **[Issue Location Map](docs/troubleshooting/ISSUE_LOCATION_MAP.md)** - Where to find code for specific issues
-- **[Troubleshooting Guide](docs/troubleshooting/TROUBLESHOOTING_GUIDE.md)** - Comprehensive issue resolution
-
-### 🏗️ Architecture
-- **[Module Organization](docs/architecture/MODULE_ORGANIZATION.md)** - System structure and responsibilities
-- **[Error Recovery Strategy](docs/architecture/ERROR_RECOVERY_STRATEGY.md)** - Complete error handling
-- **[State Validation](docs/architecture/STATE_VALIDATION.md)** - Self-healing mechanisms
-
-### 🧪 Testing
-- **[Testing Guide](docs/testing/TESTING_GUIDE.md)** - Test procedures and scenarios
-
-### ⚙️ Configuration & Logging
-- **[Configuration Validation](docs/troubleshooting/CONFIGURATION_VALIDATION.md)** - Startup validation
-- **[Startup Validation](docs/troubleshooting/STARTUP_VALIDATION.md)** - Pre-mission checks
-- **[Mission Logging](docs/troubleshooting/MISSION_LOGGING.md)** - Event logging and analysis
-- **[Error Context Reference](docs/troubleshooting/ERROR_CONTEXT_REFERENCE.md)** - Error codes and recovery
-- **[Complete Tool Suite](docs/troubleshooting/COMPLETE_TOOL_SUITE.md)** - All tools overview
-- **[Master Troubleshooting Index](docs/troubleshooting/MASTER_TROUBLESHOOTING_INDEX.md)** - Complete index
-- **[Integration Checklist](docs/troubleshooting/INTEGRATION_CHECKLIST.md)** - Pre-mission checklist
-
----
-
-## 🎯 Key Features
-
-### Robustness
-- ✅ **State Validation** - Validates all state transitions
-- ✅ **Self-Healing** - Automatic recovery from invalid states
-- ✅ **Multiple Fallbacks** - Fallback strategies for all critical operations
-- ✅ **Health Monitoring** - Proactive system health checks
-- ✅ **Error Recovery** - Comprehensive error recovery mechanisms
-
-### Maintainability
-- ✅ **Clear Organization** - Well-structured modules
-- ✅ **Comprehensive Docs** - 25+ documentation files
-- ✅ **Easy Debugging** - Issue location maps and guides
-- ✅ **Diagnostic Tools** - Automated health checks
-- ✅ **Structured Logging** - Contextual, categorized logs
-
-### Adaptability
-- ✅ **Handles Issues** - Adapts to problems during testing
-- ✅ **Completes Goals** - Finishes mission despite errors
-- ✅ **Multiple Strategies** - Different recovery approaches
-- ✅ **Fallback Mechanisms** - Works even without detections
-- ✅ **Health-Aware** - Monitors and responds to system health
-
----
-
-## 🛠️ Tools
-
-### Diagnostic Script
-```bash
-ros2 run tyre_inspection_mission diagnostic_check
-```
-- Quick system health check
-- Checks topics, services, Nav2, TF frames
-- Exit codes: 0=healthy, 2=warning, 1=critical
-
-### Mission Monitor
-```bash
-ros2 run tyre_inspection_mission mission_monitor
-```
-- Real-time progress tracking
-- Automatic issue detection
-- Health status monitoring
-- Adaptive recommendations
-
-### Mission Status Viewer
-```bash
-ros2 run tyre_inspection_mission mission_status
-```
-- Real-time status display
-- Progress visualization
-- Issue alerts
-- Health indicators
-
-### Mission Log Recorder
-```bash
-ros2 run tyre_inspection_mission mission_log_recorder
-```
-- Records all mission events
-- JSONL format for analysis
-- Post-mortem debugging
-- Performance tracking
-
-### Mission Log Analyzer
-```bash
-ros2 run tyre_inspection_mission analyze_mission_log <log_file>
-```
-- Analyzes mission logs
-- Error and issue summary
-- Performance metrics
-- State transition history
-
-### State Validator
-- Validates all state transitions
-- Checks state requirements
-- Detects timeouts
-- Provides recovery suggestions
-
----
-
-## 📊 Project Statistics
-
-- **Python Modules:** 14 files
-- **Documentation:** 25+ markdown files
-- **Total Code:** ~15,000+ lines
-- **Total Docs:** ~10,000+ lines
-- **Error Codes:** 30+ categorized codes
-- **Recovery Strategies:** 20+ strategies
-
----
-
-## 🔍 Where to Look for Issues
-
-### By Issue Type
-- **Detection Issues:** `vehicle_tracker.py`, `[DET]` logs
-- **Navigation Issues:** `goal_planner.py`, `navigation_manager.py`, `[NAV]` logs
-- **Planning Issues:** `goal_planner.py`, `[PLAN]` logs
-- **Capture Issues:** `photo_capture.py`, `[CAP]` logs
-- **State Machine:** `mission_controller.py`, `[STATE]` logs
-- **Error Recovery:** `ERROR_RECOVERY` state, `diagnostics.py`, `[ERR]` logs
-
-### By Error Code
-- **NAV_xxx:** Navigation errors → See Error Recovery Strategy
-- **DET_xxx:** Detection errors → See Troubleshooting Guide
-- **PLAN_xxx:** Planning errors → See Error Recovery Strategy
-- **CAP_xxx:** Capture errors → See Troubleshooting Guide
-- **TF_xxx:** Transform errors → See Error Recovery Strategy
-
----
-
-## 📖 Documentation Index
+## Project Structure
 
 ```
-docs/
-├── troubleshooting/
-│   ├── TROUBLESHOOTING_GUIDE.md    # Comprehensive guide
-│   ├── QUICK_REFERENCE.md          # Fast lookup
-│   └── ISSUE_LOCATION_MAP.md       # Where to find code
-├── architecture/
-│   ├── MODULE_ORGANIZATION.md      # System structure
-│   ├── ERROR_RECOVERY_STRATEGY.md  # Error handling
-│   ├── STATE_VALIDATION.md         # State validation
-│   └── SELF_HEALING_AND_VALIDATION.md
-└── testing/
-    └── TESTING_GUIDE.md            # Test procedures
+ugv_ws/
+├── src/amr_simulation/src/
+│   ├── ugv_perception/      # Vehicle detection (NEW)
+│   ├── ugv_mission/         # Mission management (NEW)
+│   ├── ugv_inspection/      # Image capture (NEW)
+│   ├── ugv_msgs/            # Custom messages (NEW)
+│   ├── ugv_nav/             # Navigation (existing)
+│   ├── ugv_vision/          # Vision (existing)
+│   └── ugv_slam/            # SLAM (existing)
+├── maps/                    # Environment maps
+├── images/                  # Captured images
+├── config/                  # Configuration files
+└── scripts/                 # Utility scripts
 ```
 
----
+## Requirements
 
-## 🎓 Learning Resources
+- Ubuntu 22.04 (or compatible)
+- ROS2 Humble Hawksbill
+- Python 3.10+
+- Jetson Orin (with CUDA support for YOLOv8)
+- Waveshare UGV Rover with LiDAR and camera
 
-1. **Start Here:** [Quick Reference](docs/troubleshooting/QUICK_REFERENCE.md)
-2. **Find Issues:** [Issue Location Map](docs/troubleshooting/ISSUE_LOCATION_MAP.md)
-3. **Understand System:** [Module Organization](docs/architecture/MODULE_ORGANIZATION.md)
-4. **Error Handling:** [Error Recovery Strategy](docs/architecture/ERROR_RECOVERY_STRATEGY.md)
-5. **State Management:** [State Validation](docs/architecture/STATE_VALIDATION.md)
+## License
 
----
+Apache 2.0
 
-## ✅ Project Status
+## Authors
 
-- **Documentation:** ✅ 100% Complete
-- **Diagnostic Tools:** ✅ 100% Complete
-- **State Validator:** ✅ 100% Complete
-- **Code Organization:** ✅ 100% Complete
-- **Error Recovery:** ✅ 100% Complete
-- **Supporting Modules:** ✅ 100% Complete
+Jetson UGV Team
 
----
+## References
 
-**Last Updated:** Current Session  
-**Version:** 1.0  
-**Status:** Production Ready (with minor integration needed)
+- [Waveshare UGV Wiki](https://www.waveshare.com/wiki/UGV_Rover_Jetson_Orin_ROS2)
+- [ROS2 Navigation](https://navigation.ros.org/)
+- [YOLOv8 Documentation](https://docs.ultralytics.com/)

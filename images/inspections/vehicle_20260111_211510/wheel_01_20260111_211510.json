@@ -1,0 +1,22 @@
+{
+  "vehicle_id": "vehicle_20260111_211510",
+  "wheel_position": "wheel_01",
+  "wheel_number": 1,
+  "timestamp": "2026-01-11T21:15:10.062303",
+  "timestamp_readable": "2026-01-11 21:15:10",
+  "image_path": "/home/jetson/ugv_ws/images/inspections/vehicle_20260111_211510/wheel_01_20260111_211510.jpg",
+  "image_filename": "wheel_01_20260111_211510.jpg",
+  "image_quality": 95,
+  "image_header": {
+    "frame_id": "pt_camera_link",
+    "stamp": {
+      "sec": 1768137309,
+      "nanosec": 484370000
+    }
+  },
+  "image_properties": {
+    "height": 480,
+    "width": 640,
+    "channels": 3
+  }
+}

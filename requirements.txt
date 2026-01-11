@@ -1,7 +1,20 @@
-pyserial
-flask
-mediapipe
-requests
-easyocr
-pytesseract
-sensor_msgs_py
+# Python Dependencies for UGV Vehicle Inspection System
+# Install with: pip3 install -r requirements.txt
+
+# Core ML/Computer Vision
+ultralytics>=8.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+numpy>=1.24.0
+
+# ROS2 Python dependencies (usually installed via apt)
+# rclpy
+# sensor_msgs
+# geometry_msgs
+# cv_bridge
+
+# Utilities
+pyyaml>=6.0
+pathlib2>=2.3.7; python_version < '3.4'
