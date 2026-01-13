@@ -1,0 +1,13 @@
+/oak:
+  ros__parameters:
+    camera:
+      i_enable_imu: true
+      i_enable_ir: true
+      i_nn_type: none
+    stereo:
+      i_subpixel: true
+      i_synced: false
+      i_fps: 15
+      i_publish_pointcloud: true
+      i_align_depth: true
+      i_lr_check: true
