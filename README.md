@@ -313,7 +313,3 @@ See individual package licenses in `package.xml` files.
 - [ROS 2 Humble Documentation](https://docs.ros.org/en/humble/)
 - [Nav2 Documentation](https://navigation.ros.org/)
 - [Ultralytics YOLO](https://docs.ultralytics.com/)
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
