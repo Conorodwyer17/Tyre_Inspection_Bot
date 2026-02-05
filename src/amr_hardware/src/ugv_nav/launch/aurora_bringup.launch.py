@@ -1,26 +1,9 @@
 """
-Aurora SLAM Device Launch File
+Launch the SLAMTEC Aurora ROS 2 SDK node.
 
-This launch file integrates SLAMTEC Aurora ROS2 SDK.
-Based on official Aurora ROS2 SDK documentation.
-
-Aurora SDK Topics (with namespace prefix by default):
-- /slamware_ros_sdk_server_node/scan (sensor_msgs/LaserScan) - LiDAR data
-- /slamware_ros_sdk_server_node/odom (nav_msgs/Odometry) - 6DOF odometry
-- /slamware_ros_sdk_server_node/robot_pose (geometry_msgs/PoseStamped) - Robot pose
-- /slamware_ros_sdk_server_node/map (nav_msgs/OccupancyGrid) - Map data
-- /slamware_ros_sdk_server_node/point_cloud (sensor_msgs/PointCloud2) - Point cloud
-- /slamware_ros_sdk_server_node/left_image_raw (sensor_msgs/Image) - Left camera
-- /slamware_ros_sdk_server_node/right_image_raw (sensor_msgs/Image) - Right camera
-- /slamware_ros_sdk_server_node/depth_image_raw (sensor_msgs/Image) - Depth image
-- /slamware_ros_sdk_server_node/imu_raw_data (sensor_msgs/Imu) - IMU data
-
-Aurora TF frames:
-- map (map frame)
-- base_link (robot base frame, configurable via robot_frame parameter)
-- laser (LiDAR frame, configurable via laser_frame parameter)
-- imu_link (IMU frame, configurable via imu_frame parameter)
-- camera_left, camera_right (camera frames)
+Brings up the Aurora driver so we get LiDAR scan, 6DOF odom, map, point cloud,
+left/right/depth images, and IMU. Topics are under slamware_ros_sdk_server_node;
+TF includes map, base_link, laser, imu_link, camera_left, camera_right.
 """
 
 from launch import LaunchDescription

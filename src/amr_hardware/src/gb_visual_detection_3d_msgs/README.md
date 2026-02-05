@@ -1,2 +1,2 @@
 # gb_visual_detection_3d_msgs
-Provide messages for darknet_ros_3d and yolact_ros_3d
+Custom messages for 3D bounding boxes (used by segment_3d and inspection pipeline).

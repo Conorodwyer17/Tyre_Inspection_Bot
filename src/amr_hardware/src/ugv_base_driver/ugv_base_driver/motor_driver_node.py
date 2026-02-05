@@ -11,10 +11,9 @@ import time
 
 class MotorDriverNode(Node):
     """
-    ROS2 node for Waveshare UGV ESP32 motor control via UART/JSON.
-    
-    Subscribes to /cmd_vel (Twist) and sends commands to ESP32 via UART.
-    Optionally publishes odometry and joint states if ESP32 provides them.
+    ROS 2 node for Waveshare UGV: subscribes to /cmd_vel (Twist) and
+    forwards commands to the ESP32 over UART/JSON. Can publish odom
+    and joint states if the ESP32 sends them.
     """
     
     def __init__(self):
@@ -24,8 +23,8 @@ class MotorDriverNode(Node):
         self.declare_parameter('uart_port', '/dev/ttyUSB0')
         self.declare_parameter('baud_rate', 115200)
         self.declare_parameter('timeout', 1.0)
-        self.declare_parameter('publish_odom', False)  # Set to True if ESP32 provides odom
-        self.declare_parameter('publish_joint_states', False)  # Set to True if ESP32 provides joint states
+        self.declare_parameter('publish_odom', False)  # True if ESP32 sends odom
+        self.declare_parameter('publish_joint_states', False)  # True if ESP32 sends joint states
         
         # Get parameters
         port = self.get_parameter('uart_port').value
@@ -41,7 +40,7 @@ class MotorDriverNode(Node):
             self.get_logger().info(f'Connected to ESP32 on {port} at {baud} baud')
         except Exception as e:
             self.get_logger().error(f'Failed to connect to ESP32 on {port}: {e}')
-            self.get_logger().warn('Motor driver will continue but commands will not be sent')
+            self.get_logger().warn('Motor driver will keep running but cmd_vel will be ignored')
         
         # Subscribe to cmd_vel
         self.cmd_vel_sub = self.create_subscription(
@@ -61,22 +60,18 @@ class MotorDriverNode(Node):
             self.joint_states_pub = self.create_publisher(JointState, '/joint_states', 10)
             self.get_logger().info('Publishing joint states from ESP32')
         
-        # Timer for reading ESP32 responses (if bidirectional communication)
+        # Timer to read back from ESP32 if it sends data
         self.read_timer = self.create_timer(0.1, self.read_esp32_data)
         
         self.get_logger().info('Motor driver node initialized')
     
     def cmd_vel_callback(self, msg):
-        """
-        Callback for /cmd_vel topic.
-        Converts Twist message to JSON and sends to ESP32 via UART.
-        """
+        """Turn a Twist into JSON and send it to the ESP32 over UART."""
         if self.serial is None or not self.serial.is_open:
             self.get_logger().warn_once('ESP32 not connected, ignoring cmd_vel')
             return
         
-        # Convert Twist to JSON format expected by ESP32
-        # Adjust format based on actual Waveshare UGV protocol
+        # Twist -> JSON for Waveshare UGV protocol (tweak if your firmware differs)
         cmd = {
             'linear': {
                 'x': float(msg.linear.x),
@@ -90,7 +85,7 @@ class MotorDriverNode(Node):
             }
         }
         
-        # Send via UART
+        # Send over UART
         try:
             json_str = json.dumps(cmd) + '\n'
             self.serial.write(json_str.encode('utf-8'))
@@ -111,22 +106,17 @@ class MotorDriverNode(Node):
                 self.serial = None
     
     def read_esp32_data(self):
-        """
-        Read data from ESP32 (odometry, joint states, etc.)
-        This is called periodically by a timer.
-        """
+        """Poll ESP32 for odom/joint states; called on a timer."""
         if self.serial is None or not self.serial.is_open:
             return
         
         try:
-            # Check if data is available
             if self.serial.in_waiting > 0:
                 line = self.serial.readline().decode('utf-8').strip()
                 if line:
                     try:
                         data = json.loads(line)
-                        # Process ESP32 data based on protocol
-                        # Example: {'odom': {...}, 'joint_states': {...}}
+                        # Protocol: e.g. {'odom': {...}, 'joint_states': {...}}
                         
                         if self.publish_odom and 'odom' in data:
                             odom_msg = self.parse_odometry(data['odom'])
@@ -144,24 +134,20 @@ class MotorDriverNode(Node):
             self.get_logger().debug(f'Error reading from ESP32: {e}')
     
     def parse_odometry(self, odom_data):
-        """
-        Parse odometry data from ESP32 JSON format to ROS2 Odometry message.
-        Adjust based on actual ESP32 protocol.
-        """
+        """Convert ESP32 JSON odom to a ROS 2 Odometry message. Tweak for your firmware."""
         try:
             odom_msg = Odometry()
             odom_msg.header.stamp = self.get_clock().now().to_msg()
             odom_msg.header.frame_id = 'odom'
             odom_msg.child_frame_id = 'base_link'
             
-            # Extract pose and twist from odom_data
-            # Adjust field names based on actual ESP32 protocol
+            # Field names depend on your ESP32 protocol
             if 'pose' in odom_data:
                 pose = odom_data['pose']
                 odom_msg.pose.pose.position.x = float(pose.get('x', 0.0))
                 odom_msg.pose.pose.position.y = float(pose.get('y', 0.0))
                 odom_msg.pose.pose.position.z = float(pose.get('z', 0.0))
-                # Handle orientation (quaternion or euler)
+                # Orientation: quaternion or euler
                 if 'orientation' in pose:
                     orient = pose['orientation']
                     odom_msg.pose.pose.orientation.x = float(orient.get('x', 0.0))
@@ -184,16 +170,12 @@ class MotorDriverNode(Node):
             return None
     
     def parse_joint_states(self, joint_data):
-        """
-        Parse joint state data from ESP32 JSON format to ROS2 JointState message.
-        Adjust based on actual ESP32 protocol.
-        """
+        """Convert ESP32 JSON joint state to a ROS 2 JointState message. Tweak for your firmware."""
         try:
             joint_msg = JointState()
             joint_msg.header.stamp = self.get_clock().now().to_msg()
             
-            # Extract joint names, positions, velocities, efforts
-            # Adjust field names based on actual ESP32 protocol
+            # Field names depend on your ESP32 protocol
             if 'names' in joint_data:
                 joint_msg.name = [str(name) for name in joint_data['names']]
             if 'positions' in joint_data:
@@ -209,7 +191,7 @@ class MotorDriverNode(Node):
             return None
     
     def destroy_node(self):
-        """Clean up on node shutdown"""
+        """Close serial and shut down."""
         if self.serial and self.serial.is_open:
             self.serial.close()
             self.get_logger().info('Closed ESP32 connection')

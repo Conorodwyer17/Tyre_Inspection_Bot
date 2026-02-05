@@ -1,150 +1,139 @@
-# System Architecture: Autonomous Tire Inspection Robot
+# System architecture: autonomous tyre inspection robot
 
-This document describes the hardware and software architecture of the tire inspection autonomous robot. The system uses a WaveShare six-wheel chassis, an ESP32-based chassis controller, an onboard computer (Raspberry Pi 5 or NVIDIA Jetson Orin) running ROS 2 on Ubuntu, and a SLAMTEC Aurora 6DOF SLAM device for localization and mapping. Optional Coral USB Accelerator is used only when the host is a Raspberry Pi.
+How my setup is put together: hardware, software, and how the bits talk to each other. I use a WaveShare six-wheel chassis, an ESP32 for the motors, either a Raspberry Pi 5 or a Jetson Orin running ROS 2 on Ubuntu, and a SLAMTEC Aurora for localisation and mapping. The Coral USB accelerator only comes in when I'm on a Pi; the Jetson does inference on its own GPU.
 
 ---
 
-## 1. Hardware Overview
+## 1. Hardware
 
-### 1.1 Chassis: WaveShare UGV Rover (Six-Wheel 4WD)
+### 1.1 Chassis: WaveShare UGV Rover (six-wheel 4WD)
 
-The mobile base is a WaveShare UGV Rover–type platform with six wheels in a 4WD configuration. The following specifications are taken from WaveShare product and wiki documentation (UGV Rover, UGV Rover Jetson Orin ROS2 kit, and UGV-Rover).
+The base is a WaveShare UGV Rover–style platform: six wheels, 4WD. Specs below are from their product and wiki pages (UGV Rover, UGV Rover Jetson Orin ROS2 kit, UGV-Rover).
 
 **Mechanical**
-- Body: 2 mm thick aluminum alloy casing.
-- Drive: Four geared motors with encoders; closed-loop speed control.
-- Tires: Soft, anti-slip rubber.
-- Maximum speed: 1.3 m/s.
-- Power: 3S lithium battery UPS module; supports continuous operation while charging.
+- Body: 2 mm thick aluminium alloy.
+- Drive: four geared motors with encoders, closed-loop speed control.
+- Tyres: soft, anti-slip rubber.
+- Max speed: 1.3 m/s.
+- Power: 3S lithium battery UPS; I can run and charge at the same time.
 
-**Dimensions and models**
-- Exact dimensions and mounting interfaces are given in the vendor dimensional diagrams and STEP models. References:
+**Dimensions**
+- Exact dimensions and mounting are in the vendor’s dimensional diagrams and STEP models:
   - UGV Rover Jetson Orin ROS2: [Dimensional diagrams (with pan-tilt)](https://files.waveshare.com/wiki/UGV%20Rover%20Jetson%20Orin%20ROS2/UGV_Rover_Jetson_Orin_ROS2_Kit_2D.zip), [STEP model (with pan-tilt)](https://files.waveshare.com/wiki/UGV%20Rover%20Jetson%20Orin%20ROS2/UGV_Rover_PT_Jetson_Orin_ROS2_Kit_STEP.zip).
   - UGV-Rover (Pi 4B/5): [3D drawings and STEP models](https://www.waveshare.com/wiki/UGV-Rover) (PI4B_AI_Kit, PT_AI_Kit).
 
-**Host compatibility**
-- Supported hosts: Raspberry Pi 4B/5 or NVIDIA Jetson Orin (e.g. Jetson Orin Nano). The software stack targets Ubuntu 24.04 and ROS 2 Jazzy on ARM64 (aarch64).
+**Host**
+- I run either a Raspberry Pi 4B/5 or an NVIDIA Jetson Orin (e.g. Orin Nano). The stack is aimed at Ubuntu 24.04 and ROS 2 Jazzy on ARM64, though I’ve documented Humble on 22.04 as well in DEPLOYMENT.md.
 
-### 1.2 Chassis Controller: ESP32
+### 1.2 Chassis controller: ESP32
 
-The chassis uses a dual-controller layout. The slave controller is an ESP32 that:
+Dual-controller setup. The ESP32 handles:
 
-- Runs motor PID control for the four driven wheels.
-- Reads IMU and other onboard sensors.
-- Drives OLED display, servo(s), and LED(s).
-- Exposes a high-level interface to the host over UART using a JSON protocol.
+- Motor PID for the four driven wheels.
+- IMU and other onboard sensors.
+- OLED, servo(s), LEDs.
+- A JSON protocol over UART to the host.
 
-The host computer (Pi 5 or Jetson Orin) does not drive motors or encoders directly; it sends velocity or motion commands via the ESP32. This reduces host I/O and real-time requirements. The ROS 2 node `ugv_base_driver` runs on the host, talks to the ESP32 over a serial port (e.g. `/dev/ttyUSB0`), and subscribes to `geometry_msgs/msg/Twist` on `/cmd_vel`, translating those commands into the ESP32 JSON protocol.
+The Pi or Jetson doesn’t talk to the motors directly; it sends velocity commands to the ESP32. That keeps the host’s I/O and real-time load down. My `ugv_base_driver` node runs on the host, talks to the ESP32 over serial (e.g. `/dev/ttyUSB0`), subscribes to `/cmd_vel` (Twist), and turns those into the JSON the ESP32 expects.
 
-### 1.3 Onboard Computer (Brain)
+### 1.3 Onboard computer
 
-The onboard computer runs the ROS 2 stack and application logic. Two configurations are supported:
+Either:
 
-- **Raspberry Pi 5** (e.g. 8 GB RAM): Ubuntu 24.04 (64-bit ARM64). Optional Coral USB Accelerator for accelerated neural network inference; without it, inference runs on CPU.
-- **NVIDIA Jetson Orin** (e.g. Jetson Orin Nano): Ubuntu 24.04 (or vendor-supported LTS) with JetPack. No Coral device; inference uses the Jetson GPU.
+- **Raspberry Pi 5** (e.g. 8 GB): Ubuntu 24.04 ARM64. I can plug in a Coral USB accelerator for inference; without it, inference runs on CPU.
+- **Jetson Orin** (e.g. Orin Nano): Ubuntu 24.04 (or whatever JetPack supports). No Coral; I use the Jetson GPU for inference.
 
-In both cases the platform is “ROS Ubuntu”: a single Ubuntu-based image with ROS 2 Jazzy and the project workspace (`ugv_ws`). The same source tree and launch files are used; only the presence of Coral (and possibly library paths or model backends) differs.
+Same source tree and launch files for both; only Coral and a few paths/backends differ.
 
-### 1.4 SLAM and Perception: SLAMTEC Aurora
+### 1.4 SLAM and perception: SLAMTEC Aurora
 
-The SLAMTEC Aurora (referred to in some docs as AORA) is an all-in-one 6DOF localization and mapping device. It is used as the sole source of map, odometry, LiDAR scan, and optionally camera and IMU data, so that no SLAM or localization algorithm runs on the Pi or Jetson.
+I use the Aurora (sometimes called AORA in docs) as the single source of map, odometry, LiDAR scan, and optionally camera and IMU. No SLAM or localisation runs on the Pi or Jetson.
 
-**Physical and performance (from SLAMTEC Aurora spec and product pages)**
-- Weight: 505 g.
-- Size: 108 mm × 97 mm × 88 mm.
-- 2D map resolution: 2 cm / 5 cm / 10 cm (selectable).
-- Maximum mapping area: > 1 000 000 m².
-- LiDAR: up to 40 m range.
-- Camera: binocular fisheye, 180° FOV, 6 cm baseline; HDR supported.
-- Camera frame rate: typically 15 Hz (configurable, e.g. 10 Hz or 30 Hz).
-- Multi-sensor fusion: LiDAR, vision, and IMU with hardware time synchronization.
-- Relocalization, map save/load, and map continuation are supported.
+**Specs (from SLAMTEC)**  
+- Weight: 505 g. Size: 108 × 97 × 88 mm.  
+- 2D map resolution: 2 / 5 / 10 cm (selectable). Max mapping area > 1 000 000 m².  
+- LiDAR: up to 40 m.  
+- Camera: binocular fisheye, 180° FOV, 6 cm baseline, HDR. Typically 15 Hz (10/30 Hz configurable).  
+- LiDAR, vision, and IMU fused with hardware time sync. Relocalisation, map save/load, and map continuation supported.
 
-**Connection**
-- The Aurora is connected to the host via Ethernet or Wi-Fi. In default AP mode the device often exposes 192.168.11.1; the host runs the Aurora ROS 2 SDK node that connects to this IP (or to the Aurora’s IP when on a shared network).
+**Connection**  
+Aurora talks to the host over Ethernet or Wi-Fi. In AP mode it’s usually at 192.168.11.1. The Aurora ROS 2 SDK node on the host connects to that IP (or to whatever IP the Aurora has on the network).
 
 ---
 
-## 2. Software Architecture
+## 2. Software
 
-### 2.1 ROS 2 Workspace and Packages
+### 2.1 Workspace and packages
 
-The functional software lives in a ROS 2 workspace (e.g. `~/ugv_ws`). The repository provides the `amr_hardware` subtree, which is intended to be placed under `ugv_ws/src/` (or equivalent). Key packages:
+Everything lives in a ROS 2 workspace (e.g. `~/ugv_ws`). This repo gives you the `amr_hardware` bit; I put that under `ugv_ws/src/`. Main packages:
 
-- **ugv_nav**: Navigation and Aurora integration. Launch files include Aurora bringup (`aurora_bringup.launch.py`), Nav2-based navigation with Aurora (`nav_aurora.launch.py`), and parameter sets (e.g. `nav_aurora.yaml`) that point to Aurora topics and frames.
-- **ugv_base_driver**: ROS 2 driver for the WaveShare chassis; communicates with the ESP32 over UART/JSON and subscribes to `/cmd_vel`. Optionally publishes wheel odometry or joint states if the ESP32 provides them.
-- **segment_3d**: Two-part pipeline: (1) `ultralytics_node` (Python) runs YOLO-based 2D semantic segmentation on the Aurora left image and publishes `segmentation_msgs/ObjectsSegment`. (2) `segmentation_3d` (C++) subscribes to `ObjectsSegment` and the Aurora point cloud, computes 3D bounding boxes, and publishes `gb_visual_detection_3d_msgs/BoundingBoxes3d` (e.g. on `/darknet_ros_3d/bounding_boxes`).
-- **gb_visual_detection_3d_msgs**: Custom message package defining `BoundingBox3d` (object_name, probability, xmin–zmax) and `BoundingBoxes3d` (array of 3D boxes).
-- **segmentation_msgs**: Custom message package defining `ObjectSegment` (class_name, probability, mask indices) and `ObjectsSegment` (header, array of segments).
-- **ugv_vision**: Vision utilities and camera handling (e.g. Aurora RGB or external USB camera).
-- **inspection_manager**: High-level mission control (state machine, inspection logic, photo capture). Consumes 3D bounding boxes and drives navigation and capture. May be provided in this repository under a separate subtree (e.g. `amr_simulation`) or in another repository; the launch and topic contracts are as described in the README.
+- **ugv_nav**: Aurora bringup and Nav2. Launch files: `aurora_bringup.launch.py`, `nav_aurora.launch.py`. Params in `nav_aurora.yaml` point at Aurora topics and frames.
+- **ugv_base_driver**: Subscribes to `/cmd_vel`, talks to the ESP32 over UART/JSON. Can publish wheel odom and joint states if the ESP32 sends them.
+- **segment_3d**: (1) `ultralytics_node` (Python) runs YOLO on the Aurora left image and publishes `segmentation_msgs/ObjectsSegment`. (2) The C++ `segmentation_3d` node subscribes to that plus the Aurora point cloud, builds 3D boxes, and publishes `gb_visual_detection_3d_msgs/BoundingBoxes3d` (e.g. on `/darknet_ros_3d/bounding_boxes`).
+- **gb_visual_detection_3d_msgs**: Custom messages for 3D boxes (object_name, probability, xmin–zmax).
+- **segmentation_msgs**: Custom messages for 2D segments (class_name, probability, mask indices).
+- **ugv_vision**: Camera and vision helpers (Aurora RGB or external USB).
+- **inspection_manager**: Mission state machine, goals, photo capture. Eats the 3D boxes and drives navigation. Might live in this repo under `amr_simulation` or in another repo; the README describes the launch and topic names.
 
-The Aurora ROS 2 SDK (e.g. `slamware_ros_sdk`) is installed separately (official SLAMTEC package or fallback SDK). It runs the node that connects to the Aurora device and publishes topics and TF.
+The Aurora ROS 2 SDK (`slamware_ros_sdk`) is installed separately (official package or fallback). That’s what actually connects to the Aurora and publishes topics and TF.
 
-### 2.2 Topic and Data Flow
+### 2.2 Topics and data flow
 
-- **Aurora** (via `slamware_ros_sdk_server_node` or equivalent):
-  - `/slamware_ros_sdk_server_node/scan` — `sensor_msgs/msg/LaserScan`
-  - `/slamware_ros_sdk_server_node/odom` — `nav_msgs/msg/Odometry` (6DOF)
-  - `/slamware_ros_sdk_server_node/map` — `nav_msgs/msg/OccupancyGrid`
-  - `/slamware_ros_sdk_server_node/point_cloud` — `sensor_msgs/msg/PointCloud2`
-  - `/slamware_ros_sdk_server_node/left_image_raw`, `right_image_raw`, `depth_image_raw` — images
-  - `/slamware_ros_sdk_server_node/imu_raw_data` — `sensor_msgs/msg/Imu`
-  - TF: map, odom, base_link, laser, imu_link, camera frames (names may be parameterized).
+**Aurora** (via `slamware_ros_sdk_server_node`):  
+`/slamware_ros_sdk_server_node/scan`, `/odom`, `/map`, `/point_cloud`, left/right/depth images, `imu_raw_data`, plus TF (map, odom, base_link, laser, imu_link, camera frames).
 
-- **Nav2** uses Aurora’s map and scan for costmaps and planning, and Aurora’s odometry for the controller. It publishes `geometry_msgs/msg/Twist` on `/cmd_vel`.
+**Nav2** uses Aurora’s map and scan for costmaps and planning, and Aurora’s odom for the controller. It publishes Twist on `/cmd_vel`.
 
-- **ugv_base_driver** subscribes to `/cmd_vel` and sends the corresponding commands to the ESP32 over UART.
+**ugv_base_driver** subscribes to `/cmd_vel` and forwards to the ESP32 over UART.
 
-- **segment_3d** subscribes to an image topic (e.g. Aurora left image) and point cloud, and publishes 3D bounding boxes (e.g. for tires/vehicles). **inspection_manager** consumes these and runs the inspection mission.
+**segment_3d** turns Aurora image + point cloud into 3D bounding boxes. **inspection_manager** uses those to run the inspection mission.
 
-High-level flow:
+Rough flow:
 
 ```
 Aurora (SLAM/odom/map/scan/images/point_cloud)
-    → Nav2 (planning + /cmd_vel) → ugv_base_driver → ESP32 → motors
-    → ultralytics_node (image) → ObjectsSegment
-    → segmentation_3d (ObjectsSegment + point_cloud) → BoundingBoxes3d
-    → inspection_manager (mission state, goals, photo capture)
+    → Nav2 → /cmd_vel → ugv_base_driver → ESP32 → motors
+    → ultralytics_node → ObjectsSegment
+    → segmentation_3d → BoundingBoxes3d
+    → inspection_manager (mission, goals, photos)
 ```
 
-### 2.3 Transform (TF) and Frames
+### 2.3 TF and frames
 
-The TF tree is driven primarily by the Aurora SDK node and, if used, robot_state_publisher (URDF).
+TF comes mainly from the Aurora SDK (and robot_state_publisher if you use a URDF).
 
-- **map**: Global fixed frame; Aurora builds and maintains the map in this frame.
-- **odom**: Odometry frame; Aurora publishes the pose of the robot in this frame (and/or map → odom).
-- **base_link** (or **base_footprint**): Robot base. Aurora typically publishes odom → base_link (and possibly map → base_link or map → odom → base_link depending on SDK configuration).
-- **laser**, **imu_link**, **camera_left**, **camera_right**: Sensor frames relative to base_link, as published by the Aurora SDK.
+- **map**: Global frame; Aurora builds and keeps the map here.
+- **odom**: Odometry frame; Aurora publishes pose here (and/or map → odom).
+- **base_link** / **base_footprint**: Robot base.
+- **laser**, **imu_link**, **camera_left**, **camera_right**: Sensor frames from the Aurora SDK.
 
-Nav2 parameters in this project (e.g. in `nav_aurora.yaml`) set `global_frame: map`, `robot_base_frame: base_footprint` or `base_link`, and `odom_topic: /slamware_ros_sdk_server_node/odom`, so that the stack uses Aurora’s map, odometry, and base frame consistently. Local costmap often uses `global_frame: odom` for a rolling window; global costmap uses `map`.
+In `nav_aurora.yaml` I set `global_frame: map`, `robot_base_frame: base_footprint` (or base_link), and `odom_topic: /slamware_ros_sdk_server_node/odom` so the stack lines up with Aurora. Local costmap uses `odom` for the rolling window; global uses `map`.
 
-### 2.4 Localization and Odometry
+### 2.4 Localisation and odometry
 
-- **Localization**: The system operates in localization-only mode relative to a map. The map is either built and saved using Aurora’s capabilities or provided by the Aurora at runtime. No separate AMCL or particle filter is required for basic operation; Aurora provides 6DOF pose in the map.
-- **Odometry**: The primary odometry source is Aurora’s fused output on `/slamware_ros_sdk_server_node/odom`. Wheel odometry from the ESP32 may be used in addition (e.g. for redundancy or smoothing) if the driver and robot_localization are configured accordingly; the current default is to rely on Aurora for odometry and TF.
+I run in localisation-only mode: the map is either built and saved with Aurora or loaded at runtime. No AMCL or particle filter; Aurora gives me 6DOF pose in the map. Odometry is Aurora’s fused output on `/slamware_ros_sdk_server_node/odom`. I could add ESP32 wheel odom via robot_localization if I wanted; by default I rely on Aurora for odom and TF.
 
-### 2.5 Mission and Inspection Flow
+### 2.5 Mission flow
 
-The tire inspection mission is orchestrated by the inspection manager. Conceptually: the robot navigates (using Nav2 and Aurora map/odom) to waypoints or search patterns; the segmentation pipeline detects vehicles and tires in the camera and point cloud and publishes 3D bounding boxes; the inspection manager uses these detections to send goals (e.g. approach a tire, maintain standoff), triggers photo capture with metadata, and advances the state machine (e.g. next vehicle or next tire). Configuration (truck/wheel class names, standoff distance, detection topic) is described in the README.
+The inspection manager runs the show: navigate to waypoints or search patterns (Nav2 + Aurora map/odom), segment vehicles and tyres (pipeline above), use the 3D boxes to send goals (e.g. approach a tyre, hold standoff), trigger photos with metadata, and step through the state machine. Truck/wheel class names, standoff distance, and detection topic are in the README.
 
 ---
 
-## 3. Summary Table
+## 3. Summary
 
-| Component                  | Role                                                                 |
-|----------------------------|----------------------------------------------------------------------|
-| WaveShare 6-wheel          | Chassis; 4WD, encoders, 2 mm aluminum; dimensions per vendor docs    |
-| ESP32                      | Motor control, IMU, peripherals; UART/JSON to host                   |
-| Pi 5 / Jetson Orin         | Onboard computer; Ubuntu + ROS 2 (see DEPLOYMENT.md)                 |
-| Coral (optional)           | USB accelerator for inference on Pi only                            |
-| SLAMTEC Aurora             | 6DOF SLAM, map, odom, scan, images, point cloud, IMU                  |
-| ugv_nav                    | Aurora bringup, Nav2, params for Aurora topics/frames                 |
-| ugv_base_driver            | /cmd_vel → ESP32 UART; optional wheel odom / joint states            |
-| segment_3d + msgs          | YOLO → ObjectsSegment → 3D boxes (BoundingBoxes3d)                  |
-| ugv_vision                 | Camera and vision utilities                                          |
-| inspection_manager         | Mission state machine, goals, photo capture                          |
-| TF                         | map → odom → base_link (+ sensors) from Aurora SDK                   |
+| Part              | Role |
+|-------------------|------|
+| WaveShare 6-wheel | Chassis; 4WD, encoders, 2 mm aluminium; see vendor docs for dimensions |
+| ESP32             | Motors, IMU, peripherals; UART/JSON to host |
+| Pi 5 / Jetson Orin| Onboard computer; Ubuntu + ROS 2 (see DEPLOYMENT.md) |
+| Coral (optional)  | USB accelerator for inference on Pi only |
+| SLAMTEC Aurora    | 6DOF SLAM, map, odom, scan, images, point cloud, IMU |
+| ugv_nav           | Aurora bringup, Nav2, params |
+| ugv_base_driver   | /cmd_vel → ESP32 UART; optional wheel odom / joint states |
+| segment_3d + msgs | YOLO → ObjectsSegment → 3D boxes |
+| ugv_vision        | Camera and vision utilities |
+| inspection_manager| Mission state machine, goals, photos |
+| TF                | map → odom → base_link (+ sensors) from Aurora SDK |
 
 ---
 
@@ -152,7 +141,7 @@ The tire inspection mission is orchestrated by the inspection manager. Conceptua
 
 - WaveShare UGV Rover (Jetson Orin ROS2): https://www.waveshare.com/wiki/UGV_Rover_Jetson_Orin_ROS2  
 - WaveShare UGV-Rover (Pi): https://www.waveshare.com/wiki/UGV-Rover  
-- SLAMTEC Aurora product and spec: https://www.slamtec.com/en/Aurora, https://www.slamtec.com/en/Aurora/Spec  
-- Aurora ROS2 SDK (developer): https://developer.slamtec.com/docs/slamware/aurora-ros2-sdk-en/  
+- SLAMTEC Aurora: https://www.slamtec.com/en/Aurora, https://www.slamtec.com/en/Aurora/Spec  
+- Aurora ROS2 SDK: https://developer.slamtec.com/docs/slamware/aurora-ros2-sdk-en/  
 - ROS 2 Jazzy: https://docs.ros.org/en/jazzy/  
 - Nav2: https://navigation.ros.org/

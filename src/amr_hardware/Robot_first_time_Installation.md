@@ -1,42 +1,41 @@
-# First-Time Setup Guide for Onboard Computer (Raspberry Pi 5 or Jetson Orin)
+# First-time setup: onboard computer (Pi 5 or Jetson Orin)
 
-## 1. System Preparation
+Steps I use to get the board ready and install ROS 2 and the workspace.
+
+## 1. System preparation
 
 ### 1.1 Install Ubuntu 24.04
 
-- **Raspberry Pi 5:** Download Ubuntu 24.04 Server (64-bit ARM64), flash to microSD with Raspberry Pi Imager, boot and complete initial setup.
-- **Jetson Orin:** Use NVIDIA JetPack with Ubuntu 24.04 (or supported LTS) and flash per NVIDIA documentation.
+- **Raspberry Pi 5:** Download Ubuntu 24.04 Server (64-bit ARM64), flash to microSD with Raspberry Pi Imager, boot and do the initial setup.
+- **Jetson Orin:** Use NVIDIA JetPack with Ubuntu 24.04 (or the LTS they support) and flash per their docs.
 
-### 1.2 Connect to the Onboard Computer
+### 1.2 Connect to the board
 
-**Via SSH (recommended):**
+**SSH (handiest):**
 ```bash
 ssh <username>@<board-ip>
 ```
 
-**Via direct connection:**
-- Connect keyboard, mouse, and monitor to the board
-- Or use serial console (USB-C on Pi; UART/serial on Jetson as per vendor docs)
+**Direct:** keyboard, mouse, monitor, or serial (USB-C on Pi; UART/serial on Jetson as per vendor docs).
 
-### 1.3 Configure Network
+### 1.3 Network
 
-Ensure the onboard computer is connected to your local network:
+Make sure the board is on your local network:
 ```bash
-# Check network connection
 ip addr show
 ping -c 3 8.8.8.8
 ```
 
 ## 2. Install ROS 2 Jazzy
 
-### 2.1 Update System
+### 2.1 Update system
 
 ```bash
 sudo apt update
 sudo apt upgrade -y
 ```
 
-### 2.2 Install Prerequisites
+### 2.2 Prerequisites
 
 ```bash
 sudo apt install -y software-properties-common
@@ -44,14 +43,14 @@ sudo add-apt-repository universe
 sudo apt update && sudo apt install -y curl gnupg lsb-release
 ```
 
-### 2.3 Add ROS 2 Repository
+### 2.3 Add ROS 2 repo
 
 ```bash
 sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
 sudo sh -c 'echo "deb [arch=$(dpkg --print-architecture)] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2-latest.list'
 ```
 
-### 2.4 Install ROS 2 Jazzy
+### 2.4 Install Jazzy
 
 ```bash
 sudo apt update
@@ -67,7 +66,7 @@ echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 3. Install ROS 2 Dependencies
+## 3. ROS 2 dependencies
 
 ```bash
 sudo apt update
@@ -82,12 +81,9 @@ sudo apt install -y \
   ros-jazzy-tf2-geometry-msgs
 ```
 
-**Important:** Do NOT install:
-- `ros-jazzy-depthai-*` (OAK-D camera, obsolete)
-- `ros-jazzy-cartographer-*` (SLAM, AORA replaces)
-- `ros-jazzy-rtabmap-*` (SLAM, AORA replaces)
+Don’t install: `ros-jazzy-depthai-*` (OAK-D, obsolete), `ros-jazzy-cartographer-*`, `ros-jazzy-rtabmap-*` (Aurora does SLAM).
 
-## 4. Install Python Dependencies
+## 4. Python dependencies
 
 ```bash
 sudo apt install -y python3-pip python3-venv
@@ -98,20 +94,19 @@ pip3 install --upgrade pip
 pip3 install -r requirements.txt
 ```
 
-## 5. Install SLAMTEC AORA ROS2 SDK
+## 5. SLAMTEC Aurora ROS 2 SDK
 
-**TODO:** Follow SLAMTEC AORA ROS2 SDK installation instructions:
+Follow SLAMTEC’s Aurora ROS 2 SDK instructions:
 
-1. Download AORA ROS2 SDK from SLAMTEC
-2. Clone or install SDK into workspace:
+1. Download the SDK from SLAMTEC.
+2. Put it in the workspace, e.g.:
    ```bash
    cd ~/ugv_ws/src
-   # Follow AORA SDK installation instructions
-   # Example: git clone <aora-sdk-url> aora_ros2_driver
+   # Extract or clone the SDK here
    ```
-3. Update `src/amr_hardware/src/ugv_nav/launch/aora_bringup.launch.py` with correct package name
+3. The launch file `aurora_bringup.launch.py` (in ugv_nav) expects the package name from the official SDK; adjust if you use a different one.
 
-## 6. Build Workspace
+## 6. Build workspace
 
 ```bash
 cd ~/ugv_ws
@@ -120,199 +115,121 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-Add workspace sourcing to `~/.bashrc`:
+Add to `~/.bashrc`:
 ```bash
 echo "source ~/ugv_ws/install/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 7. Configure ESP32 Motor Driver
+## 7. ESP32 motor driver
 
-### 7.1 Identify UART Port
+### 7.1 Find the UART port
 
 ```bash
-# List serial devices
 ls -l /dev/ttyUSB* /dev/ttyACM*
-
-# Check permissions
-groups  # Should include 'dialout' group
+groups   # should include dialout
 sudo usermod -a -G dialout $USER
-# Log out and back in for group change to take effect
+# log out and back in for dialout to apply
 ```
 
-### 7.2 Test ESP32 Connection
+### 7.2 Test ESP32
 
 ```bash
-# Test UART communication (adjust port as needed)
 ros2 run ugv_base_driver motor_driver_node --ros-args \
   -p uart_port:=/dev/ttyUSB0 \
   -p baud_rate:=115200
 ```
 
-## 8. Install Startup Script
+(Change the port if yours is different.)
 
-### 8.1 Copy Startup Script
+## 8. Startup script
 
-The `ros2_startup.sh` script is located at:
-```
-src/amr_hardware/ros2_startup.sh
-```
+The script is at `src/amr_hardware/ros2_startup.sh`. Copy it to the workspace and make it run on boot:
 
-Copy to workspace root:
 ```bash
 cp src/amr_hardware/ros2_startup.sh ~/ugv_ws/
 chmod +x ~/ugv_ws/ros2_startup.sh
-```
-
-### 8.2 Configure Crontab for Automatic Startup
-
-Edit crontab:
-```bash
 crontab -e
 ```
 
-Add the following line:
+Add:
 ```bash
 @reboot sleep 15 && $HOME/ugv_ws/ros2_startup.sh >> $HOME/ugv_ws/ros2_startup.log 2>&1
 ```
 
-## 9. Verify Installation
+## 9. Check everything
 
-### 9.1 Check ROS 2 Installation
-
+### ROS 2
 ```bash
 ros2 --version
 ros2 pkg list | grep nav2
 ```
 
-### 9.2 Test Aurora Connection
-
-**Connect to Aurora:**
-- If Aurora in AP mode: Connect to Wi-Fi network "Aurora-XXXX", IP: 192.168.11.1
-- If Aurora on network: Use Aurora's assigned IP address
+### Aurora
+- AP mode: connect to the Aurora Wi-Fi; IP is usually 192.168.11.1.
+- On network: use whatever IP the Aurora gets.
 
 ```bash
-# Test network connectivity
-ping 192.168.11.1  # Or Aurora's network IP
-
-# Launch Aurora SDK node
+ping 192.168.11.1
 ros2 launch slamware_ros_sdk slamware_ros_sdk_server_and_view.xml ip_address:=192.168.11.1
-
-# In another terminal, verify topics
+# In another terminal:
 ros2 topic list | grep slamware
 ros2 topic echo /slamware_ros_sdk_server_node/odom
 ros2 topic echo /slamware_ros_sdk_server_node/scan
 ros2 topic echo /slamware_ros_sdk_server_node/point_cloud
 ros2 topic echo /slamware_ros_sdk_server_node/left_image_raw
-
-# Check connection state
 ros2 topic echo /slamware_ros_sdk_server_node/state
 ```
 
-### 9.3 Test ESP32 Connection
-
+### ESP32
 ```bash
-# After connecting ESP32
 ros2 launch ugv_base_driver esp32_driver.launch.py
-# In another terminal:
+# Other terminal:
 ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.1, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"
 ```
 
-### 9.4 Test Navigation Stack
-
+### Nav stack
 ```bash
 ros2 launch ugv_nav nav_aurora.launch.py use_rviz:=true
 ```
 
-## 10. Optional: Install Coral USB Accelerator
+## 10. Optional: Coral USB Accelerator
 
-For enhanced AI inference performance:
+On a Pi, for faster inference:
 
 ```bash
-# Add Coral repository
 echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-
-# Install Edge TPU runtime
 sudo apt update
 sudo apt install libedgetpu1-std
-
-# Install PyCoral
 pip3 install pycoral
 ```
 
 ## 11. Troubleshooting
 
-### ROS 2 Not Found
+**ROS 2 not found:** `ls /opt/ros/jazzy/` then `source /opt/ros/jazzy/setup.bash`.
 
-```bash
-# Verify ROS 2 is installed
-ls /opt/ros/jazzy/
+**Build errors:** From `~/ugv_ws`, `rm -rf build/ install/ log/` then `colcon build --symlink-install`.
 
-# Source ROS 2
-source /opt/ros/jazzy/setup.bash
-```
+**Aurora SDK not found:** `ros2 pkg list | grep slamware`; check LD_LIBRARY_PATH has the aurora_remote_public lib path; `ros2 pkg prefix slamware_ros_sdk`; ping the Aurora; see https://www.slamtec.com/en/aurora.
 
-### Build Errors
+**ESP32 permission denied:** `sudo usermod -a -G dialout $USER`, then log out and back in.
 
-```bash
-# Clean and rebuild
-cd ~/ugv_ws
-rm -rf build/ install/ log/
-colcon build --symlink-install
-```
+**Network:** `ip addr show`, `sudo systemctl status networking`.
 
-### Aurora SDK Not Found
+## 12. Reboot and re-check
 
-- Verify Aurora SDK is installed: `ros2 pkg list | grep slamware`
-- Check LD_LIBRARY_PATH includes aurora_remote_public library path
-- Verify launch file exists: `ros2 pkg prefix slamware_ros_sdk`
-- Check network connection to Aurora device (Wi-Fi or Ethernet)
-- Default Aurora IP in AP mode: 192.168.11.1
-- Check SLAMTEC documentation: https://www.slamtec.com/en/aurora
-
-### ESP32 Permission Denied
-
-```bash
-# Add user to dialout group
-sudo usermod -a -G dialout $USER
-# Log out and back in
-```
-
-### Network Issues
-
-```bash
-# Check network configuration
-ip addr show
-sudo systemctl status networking
-```
-
-## 12. Restart and Verify
-
-Reboot the onboard computer:
 ```bash
 sudo reboot
 ```
 
-After reboot, verify:
-1. ROS 2 nodes start automatically (check log: `cat ~/ugv_ws/ros2_startup.log`)
-2. Aurora device is detected
-3. ESP32 motor driver connects
-4. Navigation stack initializes
+After boot: check `cat ~/ugv_ws/ros2_startup.log`, Aurora, ESP32, and that the nav stack starts.
 
-## 13. Access Web Interface (if configured)
+## 13. Web interface (if you use rosbridge)
 
-If using rosbridge for web interface:
 ```bash
-# Check rosbridge is running
 ros2 topic list | grep rosbridge
-
-# Access via browser
-http://<board-ip>:9090
+# Browser: http://<board-ip>:9090
 ```
 
----
-
-**Setup Complete!**
-
-For detailed usage instructions, see the main README.md file.
+For day-to-day usage, see the main README.md.

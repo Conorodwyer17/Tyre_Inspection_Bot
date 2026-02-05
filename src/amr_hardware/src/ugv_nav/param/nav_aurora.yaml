@@ -2,7 +2,7 @@
 # Aurora SDK publishes topics with namespace: /slamware_ros_sdk_server_node/
 # Default topics: /slamware_ros_sdk_server_node/scan, /slamware_ros_sdk_server_node/odom, etc.
 # These can be remapped or configured via Aurora SDK parameters
-# This file configures Nav2 for localization-only mode (no SLAM computation)
+# Nav2 for localisation-only (Aurora does SLAM; we just use map/odom)
 
 bt_navigator:
   ros__parameters:
