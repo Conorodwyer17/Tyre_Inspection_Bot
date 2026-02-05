@@ -21,7 +21,7 @@ class UltralyticsSegmentationNode(Node):
         self.declare_parameter("inspection_model", "best.pt")  # Model 2 for inspection
         self.declare_parameter("mode_topic", "/segmentation_mode")
         self.declare_parameter("default_mode", "navigation")
-        self.declare_parameter("camera_rgb_topic", "/oak/rgb/image_rect")  # Camera topic for hardware
+        self.declare_parameter("camera_rgb_topic", "/slamware_ros_sdk_server_node/left_image_raw")  # Aurora left camera (default)
         
         # Load both YOLO segmentation models
         nav_model_path = self.get_parameter("navigation_model").value

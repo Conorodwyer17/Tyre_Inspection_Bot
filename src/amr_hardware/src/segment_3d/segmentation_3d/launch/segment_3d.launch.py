@@ -16,8 +16,8 @@ def generate_launch_description():
     # Declare launch arguments
     camera_rgb_topic_arg = DeclareLaunchArgument(
         'camera_rgb_topic',
-        default_value='/oak/rgb/image_rect',
-        description='Camera RGB image topic'
+        default_value='/slamware_ros_sdk_server_node/left_image_raw',  # Aurora left camera (or use right_image_raw)
+        description='Camera RGB image topic (Aurora left/right camera or other camera)'
     )
     
     # Ultralytics segmentation node

@@ -2,20 +2,21 @@
 # wait for system to be ready
 sleep 15
 
+# Source ROS2 Jazzy
+source /opt/ros/jazzy/setup.bash
 
-# source bashrc for environment variables
-source /home/jetson/.bashrc
+# Source workspace
+source $HOME/ugv_ws/install/setup.bash
 
-# log file
-LOGFILE="/home/jetson/ugv_ws/ros2_startup.log"
+# log file (use generic home directory)
+LOGFILE="$HOME/ugv_ws/ros2_startup.log"
 echo "Starting ROS 2 launches at $(date)" >> $LOGFILE
 
 # detect host IP automatically
 HOST_IP=$(hostname -I | awk '{print $1}')
 echo "Detected IP: $HOST_IP" >> $LOGFILE
-export UGV_MODEL=ugv_rover
-export LDLIDAR_MODEL=ld06
-# 1️⃣ Launch SLAM navigation (without RViz)
-ros2 launch ugv_nav slam_nav.launch.py use_rviz:=false >> $LOGFILE 2>&1 &
+
+# Launch navigation with Aurora (localization mode, not SLAM)
+ros2 launch ugv_nav nav_aurora.launch.py use_rviz:=false >> $LOGFILE 2>&1 &
 
 

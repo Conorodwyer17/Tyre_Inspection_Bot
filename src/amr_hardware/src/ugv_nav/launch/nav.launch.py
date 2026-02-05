@@ -53,12 +53,16 @@ def launch_setup(context, *args, **kwargs):
     map_yaml_path = LaunchConfiguration('map', default=os.path.join(ugv_nav_dir, 'maps', 'map.yaml'))
     # Get the emcl param file
     emcl_param_file = os.path.join(emcl_dir, 'config', 'emcl2_quick_start.param.yaml')                        
-    # Include the bringup_lidar launch description
-    bringup_lidar_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(get_package_share_directory('ugv_bringup'), 'launch', 'bringup_lidar.launch.py')),
+    # Include Aurora launch (replaces legacy LiDAR)
+    # Aurora ROS2 SDK: slamware_ros_sdk package (uses XML launch files)
+    from launch.launch_description_sources import XMLLaunchDescriptionSource
+    
+    aurora_launch = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('slamware_ros_sdk'), 'launch', 'slamware_ros_sdk_server_and_view.xml')
+        ),
         launch_arguments={
-            'use_rviz': LaunchConfiguration('use_rviz'),
-            'rviz_config': 'nav_2d', 
+            'ip_address': LaunchConfiguration('aurora_ip', default='192.168.11.1'),
         }.items()
     )
 
@@ -91,14 +95,7 @@ def launch_setup(context, *args, **kwargs):
         condition=LaunchConfigurationEquals('use_localization', 'emcl')
     )
     
-    # Include the nav2_bringup_cartographer launch description if use_localization is cartographer
-    nav2_bringup_cartographer_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(get_package_share_directory('ugv_nav'), 'launch/nav_bringup', 'bringup_launch_cartographer.launch.py')),
-         launch_arguments={
-            'params_file': os.path.join(get_package_share_directory('ugv_nav'), 'param', 'emcl_dwa.yaml')
-        }.items(),
-        condition=LaunchConfigurationEquals('use_localization', 'cartographer')
-    )
+    # Cartographer removed - Aurora provides SLAM natively
     
     # Include the robot_pose_publisher launch description
     robot_pose_publisher_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(
@@ -108,12 +105,11 @@ def launch_setup(context, *args, **kwargs):
     
     # Return the list of launch descriptions
     return [
-        bringup_lidar_launch,
+        aurora_launch,
         nav2_bringup_amcl_launch,
         nav2_bringup_emcl_launch,
         emcl_launch,
-        robot_pose_publisher_launch,
-        nav2_bringup_cartographer_launch
+        robot_pose_publisher_launch
     ]
 
 # Function to generate the launch description
@@ -121,7 +117,8 @@ def generate_launch_description():
     # Return the launch description
     return LaunchDescription([
         DeclareLaunchArgument('use_localplan', default_value='teb', description='Choose which localplan to use: dwa,teb'),
-        DeclareLaunchArgument('use_localization', default_value='amcl', description='Choose which use_localization to use: amcl,cartographer'),
+        DeclareLaunchArgument('use_localization', default_value='amcl', description='Choose which use_localization to use: amcl,emcl'),
+        DeclareLaunchArgument('aurora_ip', default_value='192.168.11.1', description='IP address of Aurora device (default: 192.168.11.1 for AP mode)'),
         OpaqueFunction(function=launch_setup)
     ])
 

@@ -4,26 +4,26 @@ An autonomous robot system for inspecting commercial vehicle tires using ROS 2, 
 
 ## Overview
 
-This project implements a fully autonomous tire inspection system on a Waveshare UGV Rover with NVIDIA Jetson Orin. The robot can:
+This project implements a fully autonomous tire inspection system on a Waveshare UGV Rover with an onboard computer running ROS Ubuntu. The robot can:
 - Detect vehicles and tires using YOLO-based semantic segmentation
-- Navigate autonomously using SLAM and Nav2
+- Navigate autonomously using SLAMTEC Aurora 6DOF SLAM and Nav2
 - Generate 3D bounding boxes from 2D segmentation masks and point clouds
 - Execute complete inspection missions with state machine control
 - Capture inspection photographs with metadata
 
 ## Hardware Requirements
 
-- **Platform**: Waveshare UGV Rover PT Jetson Orin ROS2 Kit
-- **Camera**: OAK-D-Lite depth camera
-- **LiDAR**: LD06 2D LiDAR
-- **Computer**: NVIDIA Jetson Orin
+- **Platform**: Waveshare UGV Rover with ESP32 motor controller
+- **Onboard computer**: Raspberry Pi 5 (8GB RAM) or NVIDIA Jetson Orin; Ubuntu 24.04, ROS 2
+- **SLAM device**: SLAMTEC Aurora 6DOF LiDAR + Vision + IMU SLAM device
+- **Optional**: Coral USB AI Accelerator (for Raspberry Pi; Jetson has integrated GPU)
 
 ## Software Requirements
 
-- **ROS 2**: Humble Hawksbill
-- **Ubuntu**: 22.04
+- **ROS 2**: Jazzy Jalisco (native on Ubuntu 24.04)
+- **Ubuntu**: 24.04 (64-bit ARM64)
 - **Python**: 3.10+
-- **CUDA**: For GPU acceleration (recommended)
+- **Architecture**: ARM64 (aarch64) for Pi 5 or Jetson Orin
 
 ## Installation
 
@@ -35,26 +35,83 @@ Follow the first-time installation guide:
 src/amr_hardware/Robot_first_time_Installation.md
 ```
 
-### 2. Install ROS 2 Dependencies
+### 2. Install ROS 2 Jazzy
+
+```bash
+# On Raspberry Pi 5 or Jetson Orin with Ubuntu 24.04 (ROS Ubuntu)
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository universe
+sudo apt update && sudo apt install -y curl gnupg lsb-release
+
+# Add ROS2 Jazzy repository
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+sudo sh -c 'echo "deb [arch=$(dpkg --print-architecture)] http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2-latest.list'
+
+sudo apt update
+sudo apt install -y ros-jazzy-desktop
+sudo apt install -y python3-argcomplete python3-colcon-common-extensions
+```
+
+### 3. Install ROS 2 Dependencies
 
 ```bash
 sudo apt update
 sudo apt install -y \
-  ros-humble-robot-localization \
-  ros-humble-depth-image-proc \
-  ros-humble-cartographer-* \
-  ros-humble-desktop-* \
-  ros-humble-joint-state-publisher-* \
-  ros-humble-nav2-* \
-  ros-humble-rosbridge-* \
-  ros-humble-rqt-* \
-  ros-humble-rtabmap-* \
-  ros-humble-usb-cam \
-  ros-humble-depthai-* \
-  ros-humble-gazebo-*
+  ros-jazzy-nav2-* \
+  ros-jazzy-robot-localization \
+  ros-jazzy-joint-state-publisher-* \
+  ros-jazzy-rosbridge-* \
+  ros-jazzy-rqt-* \
+  ros-jazzy-tf2-* \
+  ros-jazzy-tf2-ros \
+  ros-jazzy-tf2-geometry-msgs
 ```
 
-### 3. Install Python Dependencies
+**Note:** Do NOT install:
+- `ros-jazzy-depthai-*` (OAK-D camera, obsolete)
+- `ros-jazzy-cartographer-*` (SLAM, Aurora replaces)
+- `ros-jazzy-rtabmap-*` (SLAM, Aurora replaces)
+- `ros-jazzy-depth-image-proc` (Aurora provides point clouds natively)
+
+### 4. Install SLAMTEC Aurora ROS2 SDK
+
+**Official ROS2 SDK (recommended):**
+1. Download from: https://download-en.slamtec.com/api/download/slamware-Aurora-ros2sdk/1.5?lang=en
+2. Extract to workspace:
+   ```bash
+   cd ~/ugv_ws/src
+   # Extract aurora_ros2_sdk_linux (or appropriate version) here
+   ```
+3. Build SDK:
+   ```bash
+   cd ~/ugv_ws
+   colcon build --packages-select slamware_ros_sdk
+   source install/setup.bash
+   ```
+4. Configure library path (add to `~/.bashrc`). For ARM64 (Raspberry Pi 5 or Jetson Orin):
+   ```bash
+   export LD_LIBRARY_PATH=~/ugv_ws/src/aurora_ros2_sdk_linux/src/aurora_remote_public/lib/linux_aarch64:$LD_LIBRARY_PATH
+   source ~/.bashrc
+   ```
+   For x86_64 use `linux_x86_64` in the path instead.
+
+**Note:** Package name is `slamware_ros_sdk`. Launch files are pre-configured. If the official ROS2 SDK is unavailable, Python/C++ SDKs can be used as fallback (see SLAMTEC documentation).
+
+### 5. Install Coral USB Accelerator (Optional, Raspberry Pi only)
+
+When using Raspberry Pi (not Jetson), an optional Coral USB Accelerator can improve inference. Install manually:
+
+```bash
+echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+sudo apt update && sudo apt install -y libedgetpu1-std
+pip3 install pycoral
+```
+
+See [Coral USB Accelerator documentation](https://coral.ai/docs/accelerator/get-started) for details. Jetson does not require Coral; use its integrated GPU for inference.
+
+### 6. Install Python Dependencies
 
 ```bash
 cd ~/ugv_ws
@@ -62,7 +119,7 @@ pip3 install --upgrade pip
 pip3 install -r requirements.txt
 ```
 
-### 4. Build Workspace
+### 7. Build Workspace
 
 ```bash
 cd ~/ugv_ws
@@ -75,49 +132,45 @@ source install/setup.bash
 
 ### Launch Complete Inspection System
 
-The system requires 4 terminals:
+The system requires multiple terminals:
 
-#### Terminal 1: Navigation & SLAM
+#### Terminal 1: Aurora SLAM Device
 ```bash
 cd ~/ugv_ws
 source install/setup.bash
-export UGV_MODEL=ugv_rover
-export LDLIDAR_MODEL=ld06
-ros2 launch ugv_nav slam_nav.launch.py use_rviz:=false
+# Connect to Aurora Wi-Fi if in AP mode (default IP: 192.168.11.1)
+ros2 launch ugv_nav aurora_bringup.launch.py ip_address:=192.168.11.1
 ```
 
-Wait for: `/scan`, `/odom`, `/map` topics to be available
+Wait for: `/slamware_ros_sdk_server_node/scan`, `/slamware_ros_sdk_server_node/odom`, `/slamware_ros_sdk_server_node/map` topics to be available
 
-#### Terminal 2: Camera & Point Cloud
+#### Terminal 2: ESP32 Motor Driver
 ```bash
 cd ~/ugv_ws
 source install/setup.bash
-ros2 launch ugv_vision oak_d_lite.launch.py
+ros2 launch ugv_base_driver esp32_driver.launch.py uart_port:=/dev/ttyUSB0
 ```
 
-Then (in same or new terminal):
-```bash
-ros2 run depth_image_proc point_cloud_xyz_node \
-  --ros-args \
-  -p use_approximate_sync:=true \
-  -p queue_size:=10 \
-  -r image_rect:=/oak/stereo/image_raw \
-  -r camera_info:=/oak/stereo/camera_info \
-  -r points:=/points
-```
-
-Wait for: `/oak/rgb/image_rect`, `/points` topics
-
-#### Terminal 3: 3D Segmentation
+#### Terminal 3: Navigation Stack
 ```bash
 cd ~/ugv_ws
 source install/setup.bash
-ros2 launch segmentation_3d segment_3d.launch.py
+ros2 launch ugv_nav nav_aurora.launch.py use_rviz:=false
+```
+
+Wait for: Navigation stack to initialize with Aurora data
+
+#### Terminal 4: 3D Segmentation (Aurora provides stereo cameras)
+```bash
+cd ~/ugv_ws
+source install/setup.bash
+ros2 launch segmentation_3d segment_3d.launch.py \
+  camera_rgb_topic:=/slamware_ros_sdk_server_node/left_image_raw
 ```
 
 Wait for: `/ultralytics/segmentation/objects_segment`, `/darknet_ros_3d/bounding_boxes`
 
-#### Terminal 4: Inspection Manager
+#### Terminal 5: Inspection Manager
 ```bash
 cd ~/ugv_ws
 source install/setup.bash
@@ -141,9 +194,6 @@ Edit the vehicle positions file:
 ```bash
 # For hardware:
 src/amr_hardware/src/ugv_nav/maps/...
-
-# For simulation:
-src/amr_simulation/src/inspection_manager/config/trucks.yaml
 ```
 
 Example `trucks.yaml`:
@@ -180,26 +230,43 @@ Launch parameters:
 - `standoff_distance`: Standoff distance in meters (default: 2.0)
 - `approach_offset`: Approach distance in meters (default: 0.5)
 
+### ESP32 Motor Driver Configuration
+
+Edit launch parameters in `ugv_base_driver/launch/esp32_driver.launch.py`:
+- `uart_port`: UART device path (default: `/dev/ttyUSB0`)
+- `baud_rate`: Communication baud rate (default: `115200`)
+- `publish_odom`: Publish odometry from ESP32 if available (default: `false`)
+- `publish_joint_states`: Publish joint states from ESP32 if available (default: `false`)
+
 ## System Architecture
 
 ### Components
 
-1. **Navigation Stack** (`ugv_nav`)
-   - SLAM Toolbox for mapping
+1. **SLAMTEC Aurora 6DOF SLAM Device**
+   - Provides: LiDAR scans, 6DOF odometry, IMU data, map, point clouds
+   - TF frames: `/map → /odom → /base_link`
+   - No on-board SLAM computation required
+
+2. **Navigation Stack** (`ugv_nav`)
    - Nav2 for path planning and execution
-   - LiDAR-based localization
+   - AMCL or EKF for localization (using Aurora map)
+   - Subscribes to Aurora topics: `/slamware_ros_sdk_server_node/scan`, `/slamware_ros_sdk_server_node/odom`, `/slamware_ros_sdk_server_node/map`
 
-2. **Vision System** (`ugv_vision`)
-   - OAK-D-Lite camera driver
-   - Depth image processing
-   - Point cloud generation
+3. **ESP32 Motor Driver** (`ugv_base_driver`)
+   - UART/JSON communication with Waveshare UGV base
+   - Subscribes to `/cmd_vel` (Twist)
+   - Handles motor PID control, IMU readout, actuator state
 
-3. **3D Segmentation** (`segmentation_3d`)
+4. **Vision System** (`ugv_vision`)
+   - Aurora RGB camera (if available) or external USB camera
+   - Point cloud processing (from Aurora)
+
+5. **3D Segmentation** (`segmentation_3d`)
    - YOLO-based 2D semantic segmentation
    - Point cloud processing
    - 3D bounding box generation
 
-4. **Inspection Manager** (`inspection_manager`)
+6. **Inspection Manager** (`inspection_manager`)
    - State machine for mission control
    - Detection-based navigation
    - Photo capture and metadata storage
@@ -207,47 +274,65 @@ Launch parameters:
 ### Data Flow
 
 ```
-Camera → 2D Segmentation → 3D Bounding Boxes
+Aurora SLAM → /slamware_ros_sdk_server_node/odom, /scan, /map, /point_cloud, /left_image_raw
    ↓
-Point Cloud ──────────────┘
+Nav2 → /cmd_vel → ESP32 Driver → Motors
    ↓
-Inspection Manager → Nav2 → Robot Movement
+Aurora Camera → 2D Segmentation → 3D Bounding Boxes
+   ↓
+Inspection Manager → Mission Control
 ```
 
 ## Troubleshooting
 
-### Point Cloud Not Publishing
+### Aurora Device Not Detected
 
 ```bash
-# Verify point cloud node is running
-ros2 topic hz /points
+# Check USB connection
+lsusb | grep -i slamtec
 
-# Check camera topics
-ros2 topic hz /oak/stereo/image_raw
-ros2 topic hz /oak/stereo/camera_info
+# Verify Aurora topics
+ros2 topic list | grep aurora
+ros2 topic echo /odom
+ros2 topic echo /scan
 ```
 
-### No 3D Bounding Boxes
+### ESP32 Motor Driver Not Responding
 
 ```bash
-# Check segmentation is running
-ros2 topic hz /ultralytics/segmentation/objects_segment
-ros2 topic hz /darknet_ros_3d/bounding_boxes
+# Check UART connection
+ls -l /dev/ttyUSB*
 
-# Verify QoS compatibility (should both be BEST_EFFORT)
-ros2 topic info /darknet_ros_3d/bounding_boxes --verbose
+# Test UART communication
+ros2 run ugv_base_driver motor_driver_node --ros-args \
+  -p uart_port:=/dev/ttyUSB0 \
+  -p baud_rate:=115200
+
+# Check cmd_vel topic
+ros2 topic echo /cmd_vel
 ```
 
 ### Navigation Issues
 
 ```bash
-# Check SLAM map is available
-ros2 topic echo /map --once
+# Check Aurora map is available
+ros2 topic echo /slamware_ros_sdk_server_node/map --once
 
 # Verify odometry
-ros2 topic hz /odom
-ros2 topic hz /scan
+ros2 topic hz /slamware_ros_sdk_server_node/odom
+ros2 topic hz /slamware_ros_sdk_server_node/scan
+
+# Check TF tree
+ros2 run tf2_ros tf2_echo map base_link
+ros2 run tf2_ros view_frames
 ```
+
+### No 3D Bounding Boxes
+
+1. Verify Aurora camera topic exists: `ros2 topic list | grep image`
+2. Check segmentation is running: `ros2 topic hz /ultralytics/segmentation/objects_segment`
+3. Verify point cloud topic: `ros2 topic list | grep point`
+4. Adjust `minimum_probability` threshold in config
 
 ### Model Not Detecting Objects
 
@@ -263,8 +348,9 @@ ugv_ws/
 │   ├── amr_hardware/          # Hardware-specific packages
 │   │   ├── src/
 │   │   │   ├── segment_3d/     # 3D segmentation pipeline
-│   │   │   ├── ugv_nav/       # Navigation and SLAM
-│   │   │   └── ugv_vision/    # Camera drivers
+│   │   │   ├── ugv_nav/       # Navigation and localization
+│   │   │   ├── ugv_vision/   # Camera drivers (if needed)
+│   │   │   └── ugv_base_driver/  # ESP32 motor driver
 │   │   ├── Robot_first_time_Installation.md
 │   │   └── ros2_startup.sh    # Auto-startup script
 │   └── amr_simulation/        # Simulation packages
@@ -282,10 +368,10 @@ ugv_ws/
 
 ```bash
 # Build specific package
-colcon build --packages-select segmentation_3d
+colcon build --packages-select ugv_base_driver
 
 # Build with verbose output
-colcon build --packages-select inspection_manager --cmake-args -DCMAKE_VERBOSE_MAKEFILE=ON
+colcon build --packages-select segmentation_3d --cmake-args -DCMAKE_VERBOSE_MAKEFILE=ON
 ```
 
 ### Running Tests
@@ -295,6 +381,8 @@ colcon build --packages-select inspection_manager --cmake-args -DCMAKE_VERBOSE_M
 colcon test --packages-select inspection_manager
 colcon test-result --verbose
 ```
+
+See section 5 for optional Coral USB Accelerator installation (Raspberry Pi only).
 
 ## License
 
@@ -307,9 +395,16 @@ See individual package licenses in `package.xml` files.
 3. Make your changes
 4. Submit a pull request
 
+## Documentation
+
+- **ARCHITECTURE.md** – System architecture (hardware, software, TF, data flow).
+- **DEPLOYMENT.md** – ROS 2 version choice (Jazzy vs Humble), Ubuntu 22 vs 24, and native vs Docker for onboard deployment.
+
 ## References
 
+- [SLAMTEC Aurora Documentation](https://www.slamtec.com/en/aurora)
 - [Waveshare UGV Rover Documentation](https://www.waveshare.com/wiki/UGV_Rover_Jetson_Orin_ROS2)
-- [ROS 2 Humble Documentation](https://docs.ros.org/en/humble/)
+- [ROS 2 Jazzy Documentation](https://docs.ros.org/en/jazzy/)
 - [Nav2 Documentation](https://navigation.ros.org/)
 - [Ultralytics YOLO](https://docs.ultralytics.com/)
+- [Coral USB Accelerator](https://coral.ai/docs/accelerator/get-started)
