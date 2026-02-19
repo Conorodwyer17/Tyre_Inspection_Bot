@@ -25,5 +25,9 @@ install(
   DIRECTORY launch param maps rviz
   DESTINATION share/${PROJECT_NAME}
 )
+install(
+  PROGRAMS scripts/nav_lifecycle_startup.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

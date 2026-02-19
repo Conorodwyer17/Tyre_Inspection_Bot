@@ -1,27 +1,10 @@
-# Python Dependencies for Autonomous Tire Inspection Robot
+# Python dependencies for Tyre Inspection Robot
 # Install with: pip3 install -r requirements.txt
 
-# Deep Learning and Computer Vision
 ultralytics>=8.0.0
-torch>=2.0.0
-torchvision>=0.15.0
 opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=9.5.0
-
-# ROS 2 Python Utilities
-ros2-numpy>=0.0.3
-
-# Data Processing
 pyyaml>=6.0
-scipy>=1.10.0
-
-# Point Cloud Processing (if using Python PCL bindings)
-# python-pcl  # Optional, C++ PCL is used primarily
-
-# Image Processing
-scikit-image>=0.20.0
-
-# Utilities
-setuptools>=65.0.0
-ament-index-python>=1.0.0
+ros2-numpy>=0.0.3
+cv-bridge

@@ -11,7 +11,7 @@
 
   <depend>gb_visual_detection_3d_msgs</depend>
   <depend>pcl_conversions</depend>
-  <depend>pcl_ros</depend>
+  <!-- pcl_ros removed - deprecated in ROS 2 Humble, pcl_conversions provides needed functionality -->
   <depend>rclcpp</depend>
   <depend>rclpy</depend>
   <depend>segmentation_msgs</depend>

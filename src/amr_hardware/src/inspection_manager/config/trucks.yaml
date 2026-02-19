@@ -1,0 +1,12 @@
+# Legacy YAML file for vehicle positions (only used if use_dynamic_detection=false)
+# For Aurora hardware, use dynamic detection instead (use_dynamic_detection=true)
+# This file is kept for backward compatibility with simulation version
+
+trucks:
+  - id: vehicle_1
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+  # Add more vehicles here if using legacy mode
+  # Note: Dynamic detection mode detects vehicles automatically from bounding boxes

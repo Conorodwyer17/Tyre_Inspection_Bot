@@ -31,11 +31,25 @@ class UltralyticsSegmentationNode(Node):
         self.navigation_model = YOLO(nav_model_path)  # Model 1 for navigation to trucks
         
         # Try to load inspection model, fallback to navigation model if not found
+        # Resolve path: try as-is, then workspace root, then Tyre_Inspection_Bot directory
         self.get_logger().info(f"Loading inspection model: {insp_model_path}")
-        if os.path.exists(insp_model_path):
-            self.inspection_model = YOLO(insp_model_path)  # Model 2 for inspection under truck
+        resolved_insp_path = insp_model_path
+        if not os.path.exists(insp_model_path):
+            for candidate in [
+                os.path.expanduser("~/ugv_ws/best.pt"),
+                os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best.pt"),
+            ]:
+                if os.path.exists(candidate):
+                    resolved_insp_path = candidate
+                    self.get_logger().info(f"Using inspection model at: {resolved_insp_path}")
+                    break
+        if os.path.exists(resolved_insp_path):
+            self.inspection_model = YOLO(resolved_insp_path)  # Model 2 for inspection under truck
         else:
-            self.get_logger().warn(f"Inspection model not found: {insp_model_path}. Using navigation model for inspection. Wheel detection may be less accurate.")
+            self.get_logger().warn(
+                f"Inspection model not found at {insp_model_path} or workspace. "
+                "Using navigation model for inspection. Tire detection may fail (yolov8 has no 'tire' class)."
+            )
             self.inspection_model = self.navigation_model  # Fallback to navigation model
         
         # Current active model (default to navigation)

@@ -45,7 +45,7 @@ SegmentationProcessor::SegmentationProcessor() : Node("segmentation_processor_no
 void SegmentationProcessor::initParams() {
     input_segment_topic_ = "/ultralytics/segmentation/objects_segment";
     output_bbx3d_topic_ = "/segmentation_processor/bounding_boxes_3d";
-    pointcloud_topic_ = "/points";
+    pointcloud_topic_ = "/slamware_ros_sdk_server_node/point_cloud";  // Aurora SDK default
     debug_pointcloud_topic_ = "/segmentation_processor/debug_pointcloud";
     debug_markers_topic_ = "/segmentation_processor/debug_markers";
     working_frame_ = "map";

@@ -38,7 +38,8 @@ Required. Install per SLAMTEC’s instructions, then:
 
 1. Put the SDK in `~/ugv_ws/src/`.
 2. `colcon build --packages-select slamware_ros_sdk`.
-3. `aurora_bringup.launch.py` in ugv_nav is set up for the official package name.
+3. Add `aurora_remote_public/lib/linux_aarch64` (Jetson) to `LD_LIBRARY_PATH` (see SETUP_CHECKLIST.md).
+4. `aurora_bringup.launch.py` in ugv_nav is set up for the official package name. **robot_pose_publisher** is optional; if not installed, `nav_aurora.launch.py` skips it.
 
 Aurora publishes (namespaced): `/scan`, `/odom` (6DOF), `/imu/data`, `/map` (if provided), and `/tf`.
 
@@ -53,7 +54,7 @@ pip3 install --upgrade pip
 pip3 install -r requirements.txt
 ```
 
-From requirements: ultralytics, torch, torchvision, opencv-python, numpy, Pillow, ros2-numpy, pyyaml, scipy, scikit-image, setuptools, ament-index-python. Optional for Coral: pycoral, libedgetpu1-std (system package).
+From requirements: ultralytics, torch, torchvision, opencv-python, numpy, Pillow, ros2-numpy, pyyaml, scipy, scikit-image, setuptools, ament-index-python. (Coral/pycoral not used; Jetson GPU is used for inference.)
 
 ## System
 
@@ -84,8 +85,8 @@ ros2 pkg list | grep ugv_base_driver
 
 ## My setup
 
-- **Platform:** Pi 5 (8 GB) or Jetson Orin; Ubuntu 24.04 (ARM64), ROS 2.
+- **Platform:** NVIDIA Jetson (e.g. Orin Nano); Ubuntu 22.04 or 24.04 (ARM64), ROS 2.
 - **Distro:** Jazzy.
-- **SLAM:** Aurora (no on-board SLAM on the Pi/Jetson).
+- **SLAM:** Aurora (no on-board SLAM on the Jetson; Aurora provides map and odometry).
 - **Motors:** ESP32 over UART/JSON.
 - **Vision:** Aurora RGB or an external USB camera.

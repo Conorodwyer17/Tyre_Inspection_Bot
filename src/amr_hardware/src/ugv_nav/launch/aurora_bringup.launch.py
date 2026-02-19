@@ -1,63 +1,82 @@
-"""
-Launch the SLAMTEC Aurora ROS 2 SDK node.
-
-Brings up the Aurora driver so we get LiDAR scan, 6DOF odom, map, point cloud,
-left/right/depth images, and IMU. Topics are under slamware_ros_sdk_server_node;
-TF includes map, base_link, laser, imu_link, camera_left, camera_right.
-"""
+# Copyright 2024 UGV Tire Inspection
+# Launch SLAMTEC Aurora SDK node (slamware_ros_sdk) with configurable IP.
 
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
-from launch.launch_description_sources import PythonLaunchDescriptionSource, XMLLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-from ament_index_python.packages import get_package_share_directory
-import os
+from launch_ros.actions import Node
+
 
 def generate_launch_description():
-    # Aurora ROS2 SDK package name
-    aurora_package = 'slamware_ros_sdk'
-    
-    # Aurora SDK launch file (XML format)
-    aurora_launch_file = 'slamware_ros_sdk_server_and_view.xml'
-    
-    # Check if Aurora package exists
-    try:
-        aurora_dir = get_package_share_directory(aurora_package)
-        aurora_launch_path = os.path.join(aurora_dir, 'launch', aurora_launch_file)
-        
-        if not os.path.exists(aurora_launch_path):
-            # Try alternative path
-            aurora_launch_path = os.path.join(aurora_dir, aurora_launch_file)
-            if not os.path.exists(aurora_launch_path):
-                raise FileNotFoundError(f"Aurora launch file not found: {aurora_launch_path}")
-        
-        # Include Aurora driver launch
-        # Default IP: 192.168.11.1 (Aurora AP mode)
-        # Note: Aurora SDK uses XML launch files
-        aurora_launch = IncludeLaunchDescription(
-            XMLLaunchDescriptionSource(aurora_launch_path),
-            launch_arguments={
-                'ip_address': LaunchConfiguration('ip_address', default='192.168.11.1'),
-            }.items()
-        )
-        
-        return LaunchDescription([
-            DeclareLaunchArgument(
-                'ip_address',
-                default_value='192.168.11.1',
-                description='IP address of Aurora device (default: 192.168.11.1 for AP mode)'
-            ),
-            aurora_launch,
-        ])
-        
-    except Exception as e:
-        # If Aurora package not found, return a warning launch description
-        from launch.actions import LogInfo
-        
-        return LaunchDescription([
-            LogInfo(msg=f'[WARNING] Aurora ROS2 SDK not found: {e}'),
-            LogInfo(msg='Please install SLAMTEC Aurora ROS2 SDK from: https://www.slamtec.com/en/aurora'),
-            LogInfo(msg='Expected package: slamware_ros_sdk'),
-            LogInfo(msg='Expected launch file: slamware_ros_sdk_server_and_view.xml'),
-            LogInfo(msg='After installation, ensure LD_LIBRARY_PATH includes aurora_remote_public library path'),
-        ])
+    ip_address_arg = DeclareLaunchArgument(
+        'ip_address',
+        default_value='192.168.11.1',
+        description='IP address of the SLAMTEC Aurora device',
+    )
+
+    slamware_node = Node(
+        package='slamware_ros_sdk',
+        executable='slamware_ros_sdk_server_node',
+        name='slamware_ros_sdk_server_node',
+        output='both',
+        parameters=[{
+            'ip_address': LaunchConfiguration('ip_address'),
+            'angle_compensate': True,
+            'map_frame': 'slamware_map',
+            'robot_frame': 'base_link',
+            'odom_frame': 'odom',
+            'laser_frame': 'laser',
+            'imu_frame': 'imu_link',
+            'camera_left': 'camera_left',
+            'camera_right': 'camera_right',
+            'robot_pose_pub_period': 0.05,
+            'scan_pub_period': 0.1,
+            'map_pub_period': 0.2,
+            'imu_raw_data_period': 0.005,
+            'ladar_data_clockwise': True,
+            'no_preview_image': False,
+            'raw_image_on': False,
+        }],
+        remappings=[
+            ('scan', 'scan'),
+            ('odom', 'odom'),
+            ('map', 'slamware_map'),
+            ('map_metadata', 'map_metadata'),
+        ],
+    )
+
+    # TF: map -> odom (Aurora provides odom relative to map)
+    odom2map = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='odom2map',
+        arguments=['0', '0', '0', '0', '0', '0', '1', 'slamware_map', 'odom'],
+    )
+    # Camera and IMU frames (adjust if your URDF differs)
+    leftcam2base = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='leftcam2base',
+        arguments=['0.0418', '0.03', '0', '-0.5', '0.5', '-0.5', '0.5', 'base_link', 'camera_left'],
+    )
+    rightcam2leftcam = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='rightcam2Leftcam',
+        arguments=['0.06', '0', '0', '0', '0', '0', '1', 'camera_left', 'camera_right'],
+    )
+    imu2leftcam = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='imu2Leftcam',
+        arguments=['0.03', '0', '0', '0', '0', '-0.7071068', '0.7071068', 'camera_left', 'imu_link'],
+    )
+
+    return LaunchDescription([
+        ip_address_arg,
+        slamware_node,
+        odom2map,
+        leftcam2base,
+        rightcam2leftcam,
+        imu2leftcam,
+    ])

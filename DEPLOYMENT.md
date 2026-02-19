@@ -6,7 +6,7 @@ Notes on what I looked at when choosing ROS 2 distro and OS, and whether to run 
 
 ## 1. Architecture check
 
-I went through ARCHITECTURE.md against the repo and filled in the gaps: hardware (chassis, ESP32, Pi/Jetson, Coral, Aurora), packages (ugv_nav, ugv_base_driver, segment_3d, message packages, ugv_vision, inspection_manager), data flow, TF/odom, and mission flow. The only thing not in this repo is the inspection_manager package itself, which the README says can live under amr_simulation or elsewhere; the doc makes that clear. So the architecture write-up is complete and matches the codebase.
+I went through ARCHITECTURE.md against the repo and filled in the gaps: hardware (chassis, ESP32, **Jetson**—Coral and Pi are not used—Aurora), packages (ugv_nav, ugv_base_driver, segment_3d, message packages, ugv_vision, inspection_manager), data flow, TF/odom, and mission flow. The only thing not in this repo is the inspection_manager package itself, which the README says can live under amr_simulation or elsewhere; the doc makes that clear. So the architecture write-up is complete and matches the codebase.
 
 ---
 
@@ -114,6 +114,8 @@ If you do add Docker for that, the plan in section 5 below is a minimal path.
 | Jazzy or Humble? | Humble for official Aurora compatibility (22.04). Jazzy (24.04) if you’re happy testing Aurora yourself and want longer support. |
 | Ubuntu 24 or 22? | 22.04 with Humble for Aurora; 24.04 with Jazzy for the newer stack (verify Aurora). |
 | Is the architecture write-up complete? | Yes; ARCHITECTURE.md matches the repo and covers messages, pipeline, and mission flow. |
+| Run `nav_aurora.launch.py` without the mission script? | Start the Aurora SDK first (e.g. `aurora_bringup.launch.py` or step 1 of `start_full_mission.sh`) so TF has `slamware_map`→`odom`→`base_link`. Nav2 needs the `map` frame (we publish `map`→`slamware_map`). |
+| Nav2 lifecycle bringup fails (“Failed to change state for node: controller_server”)? | Run **all** terminals (Aurora, motor driver, Nav2) with Cyclone DDS: `sudo apt install -y ros-humble-rmw-cyclonedds-cpp` then in **each** terminal before any launch: `export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`. Use the same three-terminal sequence; lifecycle services often behave more reliably with Cyclone than with Fast DDS. |
 
 ---
 

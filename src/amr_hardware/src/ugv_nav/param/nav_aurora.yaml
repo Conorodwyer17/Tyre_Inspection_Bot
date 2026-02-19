@@ -77,7 +77,7 @@ controller_server:
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     progress_checker_plugin: "progress_checker"
-    goal_checker_plugin: "goal_checker"
+    goal_checker_plugins: ["goal_checker"]
     controller_plugins: ["FollowPath"]
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
@@ -170,6 +170,7 @@ local_costmap:
           obstacle_min_range: 0.0        
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
+        # Aurora SDK modified to publish map with TRANSIENT_LOCAL QoS for Nav2 compatibility
         map_subscribe_transient_local: True
       always_send_full_costmap: True
 
@@ -202,6 +203,7 @@ global_costmap:
           obstacle_min_range: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
+        # Aurora SDK modified to publish map with TRANSIENT_LOCAL QoS for Nav2 compatibility
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -215,6 +217,7 @@ map_saver:
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
+    # Aurora SDK modified to publish map with TRANSIENT_LOCAL; use True to match
     map_subscribe_transient_local: True
 
 planner_server:
@@ -314,3 +317,8 @@ velocity_smoother:
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
+
+# Lifecycle manager: bond_timeout gives nodes more time to initialize (default 4.0)
+lifecycle_manager_navigation:
+  ros__parameters:
+    bond_timeout: 10.0

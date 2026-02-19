@@ -2,7 +2,8 @@ segmentation_processor_node:
   ros__parameters:
     input_segment_topic: "/ultralytics/segmentation/objects_segment"
     output_bbx3d_topic: "/darknet_ros_3d/bounding_boxes"
-    point_cloud_topic: "/points"
+    # Aurora SDK publishes point cloud at /slamware_ros_sdk_server_node/point_cloud
+    point_cloud_topic: "/slamware_ros_sdk_server_node/point_cloud"
     debug_pointcloud_topic: "/segmentation_processor/debug_pointcloud"
     debug_markers_topic: "/segmentation_processor/debug_markers"
     # this software requires that the X-axes points directly to the scene.

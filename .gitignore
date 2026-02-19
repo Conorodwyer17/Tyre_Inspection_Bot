@@ -26,3 +26,7 @@ __pycache__/
 # Maps / slam artifacts
 *.pbstream
 
+# Local reference docs (not pushed)
+CHAT_AGENT_PROMPT.md
+docs/
+
