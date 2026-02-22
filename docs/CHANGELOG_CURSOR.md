@@ -41,3 +41,9 @@
 - segmentation_processor: tf_max_age_ms (250), reject stale frames
 - tf_latency_trace.py: 60s histogram script
 - config: tf_max_age_ms: 250
+
+### Phase E - Stereo Pipeline Hardening (2026-02-22)
+
+#### Actions
+- max_stereo_sync_delta_ms 80ms, reject desynced pairs
+- stereo_sgbm_params_verified.yaml
