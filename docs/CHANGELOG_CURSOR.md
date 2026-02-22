@@ -21,3 +21,16 @@
 
 #### Files modified
 - `docs/CHANGELOG_CURSOR.md` (created)
+
+### Phase C - Calibration Rebuild (2026-02-22)
+
+#### Actions
+- Audited equidistant_calibration.yaml, stereo_calibration_verified.yaml
+- Created calibration_audit.py, calibration_validator.py
+- Added stereo_calibration_verified.yaml to segmentation_3d/config
+- Updated aurora_stereo_calibration.py to output rms_error
+- aurora_sdk_bridge launch prefers verified calibration path
+
+#### Result
+- Depth consistency: PASS (0% error)
+- RMS: Pending live checkerboard (40-60 pairs)
