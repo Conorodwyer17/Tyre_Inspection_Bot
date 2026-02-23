@@ -1,0 +1,8 @@
+# Production stereo params (aligned with PRODUCTION_CONFIG.yaml Phase K freeze)
+# Loaded by aurora_sdk_bridge.launch.py so bridge uses verified values without manual overrides.
+aurora_sdk_bridge:
+  ros__parameters:
+    num_disparities: 160   # PRODUCTION_CONFIG: stereo_num_disparities (must be divisible by 16)
+    block_size: 11         # PRODUCTION_CONFIG: stereo_block_size
+    min_disparity: 0
+    # speckle_window_size 100, speckle_range 32 are fixed in bridge node (match PRODUCTION_CONFIG)

@@ -1,0 +1,14 @@
+# Aurora firmware 2.11 depth camera intrinsics (224x416)
+# depth_image_raw: 224 height, 416 width, 32FC1, camera_depth_optical_frame
+# Intrinsics are configurable; run depth validation to refine.
+# For ~120° FOV: fx ≈ width/(2*tan(60°)) ≈ 120; using 180 as initial estimate.
+aurora_depth_camera_info:
+  image_width: 416
+  image_height: 224
+  frame_id: camera_depth_optical_frame
+  fx: 180.0
+  fy: 180.0
+  cx: 208.0
+  cy: 112.0
+  distortion_model: plumb_bob
+  d: [0.0, 0.0, 0.0, 0.0, 0.0]

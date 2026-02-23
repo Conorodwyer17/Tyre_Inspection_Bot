@@ -1,0 +1,10 @@
+# Python dependencies for Tyre Inspection Robot
+# Install with: pip3 install -r requirements.txt
+
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=9.5.0
+pyyaml>=6.0
+ros2-numpy>=0.0.3
+cv-bridge
