@@ -6,8 +6,8 @@ Subscribes to slamware raw stereo images, computes depth via fisheye stereo,
 publishes /camera/depth/image, /camera/depth/camera_info, /camera/depth/points,
 and /stereo/navigation_permitted for depth_gate.
 
-Uses equidistant (fisheye) calibration. Replace config with checkerboard result
-for production. See docs/PHASE1_CALIBRATION_ANALYSIS.md.
+Optional: custom stereo depth from raw left/right (requires calibration YAML).
+Default: use Aurora native depth (use_bridge:=false) — see docs/AURORA_TOPICS_REFERENCE.md.
 """
 
 import rclpy
@@ -56,10 +56,13 @@ class AuroraSdkBridgeNode(Node):
         self._P1 = None
         self._stereo = None
         self._K_depth = None
+        self._baseline_m = 0.06
 
-        # Load calibration
+        # Load calibration (required; no placeholder)
         if not self._load_calibration():
-            self.get_logger().warn("Calibration failed; depth will be approximate. Run checkerboard calibration.")
+            self.get_logger().error(
+                "Calibration failed. Depth disabled. Use Aurora native (use_bridge:=false) or provide calibration YAML."
+            )
 
         self._depth_pub = self.create_publisher(Image, "/camera/depth/image", 10)
         self._info_pub = self.create_publisher(CameraInfo, "/camera/depth/camera_info", 10)
@@ -92,15 +95,18 @@ class AuroraSdkBridgeNode(Node):
         )
 
     def _load_calibration(self) -> bool:
-        """Load equidistant stereo calibration from YAML."""
+        """Load equidistant stereo calibration from YAML. Required for production."""
         if not self.calib_file or not os.path.isfile(self.calib_file):
             pkg = get_package_share_directory("aurora_sdk_bridge")
             path = os.path.join(pkg, "config", "equidistant_calibration.yaml")
             if os.path.isfile(path):
                 self.calib_file = path
             else:
-                self.get_logger().warn("No calibration file; using Aurora specs placeholder")
-                return self._use_placeholder_calibration()
+                self.get_logger().error(
+                    "No calibration file. Aurora native (use_bridge:=false) requires Aurora S. "
+                    "For Classic Aurora: capture checkerboard stereo pairs and create equidistant_calibration.yaml."
+                )
+                return False
 
         with open(self.calib_file) as f:
             c = yaml.safe_load(f)
@@ -113,6 +119,7 @@ class AuroraSdkBridgeNode(Node):
         Dr = np.array(c["right"]["dist_coeffs"], dtype=np.float64)
         R = np.array(c.get("rotation", np.eye(3).tolist()), dtype=np.float64).reshape(3, 3)
         T = np.array(c.get("translation", [-baseline, 0, 0]), dtype=np.float64)
+        self._baseline_m = float(baseline)
 
         try:
             R1, R2, P1, P2, Q = cv2.fisheye.stereoRectify(
@@ -123,7 +130,7 @@ class AuroraSdkBridgeNode(Node):
             )
         except Exception as e:
             self.get_logger().error(f"fisheye.stereoRectify failed: {e}")
-            return self._use_placeholder_calibration()
+            return False
 
         self._map1_left, self._map2_left = cv2.fisheye.initUndistortRectifyMap(
             Kl, Dl, R1, P1, (w, h), cv2.CV_32FC1
@@ -221,7 +228,7 @@ class AuroraSdkBridgeNode(Node):
         disp = np.clip(disp, 0, 65535).astype(np.uint16)
         # Disparity to depth: z = (f * baseline) / d
         fx = self._P1[0, 0]
-        baseline = 0.06
+        baseline = self._baseline_m
         with np.errstate(divide="ignore", invalid="ignore"):
             depth = (fx * baseline * 1000.0) / np.where(disp > 0, disp.astype(np.float32) / 16.0, np.nan)
         depth = np.nan_to_num(depth, nan=0.0, posinf=0.0, neginf=0.0)
@@ -296,7 +303,10 @@ def main(args=None):
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass  # launch may have already shut down the context
 
 
 if __name__ == "__main__":

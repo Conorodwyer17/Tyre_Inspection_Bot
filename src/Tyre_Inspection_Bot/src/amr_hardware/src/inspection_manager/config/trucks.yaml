@@ -1,0 +1,11 @@
+# Vehicle positions (only used if use_dynamic_detection=false)
+# For hardware, use dynamic detection (use_dynamic_detection=true) - vehicles are detected from bounding boxes.
+
+trucks:
+  - id: vehicle_1
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    yaw: 0.0
+  # Add more vehicles here if using legacy mode
+  # Note: Dynamic detection mode detects vehicles automatically from bounding boxes

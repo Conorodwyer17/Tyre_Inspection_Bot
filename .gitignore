@@ -4,3 +4,17 @@ install/
 log/
 *.pyc
 __pycache__/
+
+# Generated
+tire_inspection_photos/
+runs/
+vision_test_logs/
+indoor_test_logs/
+logs/
+backups/
+tmp/
+
+# Binaries and data
+*.deb
+*.pt
+datasets/
