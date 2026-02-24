@@ -1,4 +1,4 @@
-# Aurora Firmware 2.11 Deep Dive
+# Aurora Firmware 2.11
 
 **Purpose:** Exhaustive reference of what the Aurora publishes, what firmware 2.11 (or 2.1.1) changes, and how to audit your device after upgrade.
 
