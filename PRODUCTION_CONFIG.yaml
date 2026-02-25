@@ -65,6 +65,10 @@
     max_state_repeats: 3
     nav_retry_budget: 3
     dispatch_fail_abort_count: 3
+    rotation_search_enabled: false
+    turn_in_place_enabled: false
+    require_nav_permitted: true
+    nav_permitted_topic: /stereo/navigation_permitted
     cmd_vel_topic: /cmd_vel
     cmd_vel_nav_topic: /cmd_vel_nav
     cmd_vel_timeout_s: 2.0
@@ -76,6 +80,8 @@
 
     # Tire coverage
     expected_tires_per_vehicle: 4
+    vehicle_wheelbase_m: 2.7
+    vehicle_track_m: 1.6
 
     # Nav2 goal checker (from nav_aurora.yaml)
     xy_goal_tolerance: 0.25
