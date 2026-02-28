@@ -204,6 +204,7 @@ class InspectionManagerUnified(Node):
         }
         self.persistence.set_mission_state(self.current_mission_id, self.state.value)
         self._publish_status()
+        self._emit_metrics("mission_start", {"mission_id": self.current_mission_id})
         res.started = True
         res.mission_id = self.current_mission_id
         res.message = "mission started"
@@ -372,6 +373,14 @@ class InspectionManagerUnified(Node):
                 for t in self.tires:
                     m = self._tire_metrics(t["tire_id"])
                     m["detection_confidence"] = float(t.get("confidence", 0.0))
+                    self._emit_metrics(
+                        "tire_discovered",
+                        {
+                            "tire_id": t["tire_id"],
+                            "confidence": float(t.get("confidence", 0.0)),
+                            "freshness_s": float(t.get("freshness_s", 0.0)),
+                        },
+                    )
                 self.current_tire_index = 0
                 self.current_tire_attempt = 0
                 self.state = MissionState.PLAN_APPROACH
@@ -380,6 +389,7 @@ class InspectionManagerUnified(Node):
         elif self.state == MissionState.PLAN_APPROACH:
             tire = self.tires[self.current_tire_index]
             tire["goal"] = self.planner.compute_goal(tire)
+            self._emit_metrics("plan_approach", {"tire_id": tire["tire_id"], "goal": tire["goal"]})
             if self.current_tire_index + 1 < len(self.tires):
                 nxt = self.tires[self.current_tire_index + 1]
                 nxt["prefetch_goal"] = self.planner.compute_goal(nxt)
