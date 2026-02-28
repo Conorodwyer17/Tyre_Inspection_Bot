@@ -1,0 +1,24 @@
+Final verification timestamp: 2026-02-28T01:02:00Z
+
+- Local inventory completed and committed: YES
+  - commits: 97d7e95, ed37c20
+- resources_dump exists: YES
+  - files: docs/resources_dump.csv, docs/resources_dump.json
+- node skeleton/demo artifacts exist: PARTIAL YES
+  - esp32 bridge: nodes/esp32_bridge/esp32_serial_bridge_node.py
+  - object manager demo: nodes/object_manager/demo_object_manager_node.py
+  - detector->tracker->object_manager full chain: PARTIAL (demo object manager validated; full tracker integration pending)
+- object_<id> TF frame evidence:
+  - YES for synthetic test detection (object_1 observed in /tf stream capture)
+- integration_blueprint includes exact reproduction commands: YES
+  - file: docs/integration_blueprint.md
+
+Progress check: current artifacts and tests moving toward full autonomous navigation inspection robot: yes. Evidence: live Aurora connectivity, ESP32 telemetry capture, object registry persistence demo, TF object frame evidence, reproducible logs/manifests.
+
+Blocking gaps and remediation:
+1) Full tire-by-tire autonomous mission not yet validated end-to-end.
+   - Remediation: implement planner_adapter + visual_servo + photo_capture quality gate integration and run one full-vehicle trial.
+2) Multi-topic single-bag rosbag capture crashes with sqlite constraint in this ROS install.
+   - Remediation: patch/upgrade rosbag2 storage plugin or use MCAP-capable build.
+3) Exhaustive external crawl targets (50 repos/30 packages/50 papers) not complete yet.
+   - Remediation: continue crawl in batches and append to resources_dump with license and integration action tags.
