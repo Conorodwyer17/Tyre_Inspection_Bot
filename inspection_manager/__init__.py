@@ -1,0 +1,2 @@
+"""Refactored inspection manager package."""
+
