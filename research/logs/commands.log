@@ -43075,3 +43075,33 @@ STDOUT: probe/log files created under research/data/esp32_odometry (timestamp 20
 [2026-02-28T01:19:55+00:00] $ TF capture from live demo pipeline
 STDOUT: object frame evidence created at research/demos/object_tf_evidence_20260228_0119.txt (object_frames_found=yes).
 [exit_code=0]
+[2026-02-28T01:36:46+00:00] $ PYTHONPATH=. python3 - <<'PY'
+from inspection_manager.state_persistence import MissionStatePersistence
+store=MissionStatePersistence('research/state/inspection_missions.db')
+mid=store.start_mission('object_live','{max_retries:5}',False)
+store.add_tires(mid,['tire_1','tire_2','tire_3','tire_4'])
+store.set_tire_status(mid,'tire_1','completed',attempt_increment=1,photo_path='research/data/photos/mock.jpg',photo_metadata={'vehicle_id':'object_live','tire_id':'tire_1'})
+print('mission_id',mid)
+print(store.get_mission_state(mid)['mission']['state'])
+PY
+mission_id mission_d6cff849343b
+DISCOVERY
+[exit_code=0]
+
+[2026-02-28T01:36:47+00:00] $ PYTHONPATH=. pytest -q inspection_manager/tests | tee research/test_results/inspection_manager_pytests.txt
+bash: line 1: pytest: command not found
+[exit_code=0]
+
+[2026-02-28T01:36:53+00:00] $ PYTHONPATH=. python3 -m pytest -q inspection_manager/tests | tee research/test_results/inspection_manager_pytests.txt
+.....                                                                    [100%]
+5 passed in 0.26s
+[exit_code=0]
+
+[2026-02-28T01:37:38+00:00] $ LATEST=research/data/aurora_samples/aurora_capture_set_20260228_011902_manifest.json && echo 
+
+[exit_code=0]
+
+[2026-02-28T01:37:38+00:00] $ PYTHONPATH=. python3 research/tests/evaluate_mission.py
+research/logs/metrics/mission_d6cff849343b.json
+[exit_code=0]
+
