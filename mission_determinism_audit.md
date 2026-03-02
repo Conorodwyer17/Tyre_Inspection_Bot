@@ -93,6 +93,18 @@ Guarantees that the autonomous tyre inspection mission is deterministic and fail
 
 ---
 
+## 9. Industrial Refinement (Research Synthesis)
+
+| Pattern | Source | Status |
+|---------|--------|--------|
+| processAtWaypoint only on SUCCEEDED | nav2_waypoint_follower | ✓ |
+| Spatial re-validation before photo | should_trigger_photo | ✓ |
+| cmd_vel safety (velocity_timeout) | velocity_smoother 1.0s | ✓ |
+| Optional cmd_vel watchdog | scripts/cmd_vel_watchdog_node.py | Available |
+| stop_on_failure: false | nav_aurora | ✓ |
+
+---
+
 ## Verification Commands
 
 ```bash
