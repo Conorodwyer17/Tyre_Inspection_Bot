@@ -21,7 +21,8 @@
 | waypoint_follower | nav2_waypoint_follower | FollowWaypoints |
 | local_costmap | nav2_costmap_2d | Rolling window costmap |
 | global_costmap | nav2_costmap_2d | Static + obstacle costmap |
-| velocity_smoother | nav2_velocity_smoother | cmd_vel smoothing |
+| velocity_smoother | nav2_velocity_smoother | cmd_vel smoothing; velocity_timeout 1.0s |
+| cmd_vel_watchdog | scripts/cmd_vel_watchdog_node.py | Optional: STOP when no cmd_vel for 0.5s |
 | ugv_base_driver | ugv_base_driver | cmd_vel → ESP32 UART |
 | photo_capture_service | inspection_manager | Image capture with metadata |
 
