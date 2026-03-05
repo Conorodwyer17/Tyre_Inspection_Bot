@@ -2,7 +2,7 @@
 # Run slamware_ros_sdk_server_node separately (e.g. from ugv_nav).
 # Use for tire inspection mission.
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 import os

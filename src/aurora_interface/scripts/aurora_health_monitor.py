@@ -44,11 +44,13 @@ class AuroraHealthMonitor(Node):
         left_t = self.get_parameter("left_topic").value
         right_t = self.get_parameter("right_topic").value
 
-        self.create_subscription(Odometry, odom_t, lambda m: setattr(self, "last_odom", time.time()), qos_be)
-        self.create_subscription(LaserScan, scan_t, lambda m: setattr(self, "last_scan", time.time()), qos_be)
-        self.create_subscription(OccupancyGrid, map_t, lambda m: setattr(self, "last_map", time.time()), qos_rel)
-        self.create_subscription(Image, left_t, lambda m: setattr(self, "last_left", time.time()), qos_be)
-        self.create_subscription(Image, right_t, lambda m: setattr(self, "last_right", time.time()), qos_be)
+        def _ts(attr):
+            return lambda m: setattr(self, attr, time.time())
+        self.create_subscription(Odometry, odom_t, _ts("last_odom"), qos_be)
+        self.create_subscription(LaserScan, scan_t, _ts("last_scan"), qos_be)
+        self.create_subscription(OccupancyGrid, map_t, _ts("last_map"), qos_rel)
+        self.create_subscription(Image, left_t, _ts("last_left"), qos_be)
+        self.create_subscription(Image, right_t, _ts("last_right"), qos_be)
 
         self.healthy_pub = self.create_publisher(Bool, "aurora_interface/healthy", 10)
         self.diag_pub = self.create_publisher(String, "aurora_interface/diagnostics", 10)
@@ -61,7 +63,8 @@ class AuroraHealthMonitor(Node):
         bf = self.get_parameter("base_frame").value
 
         try:
-            self.tf_buffer.lookup_transform(wf, bf, rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.5))
+            to = rclpy.duration.Duration(seconds=0.5)
+            self.tf_buffer.lookup_transform(wf, bf, rclpy.time.Time(), timeout=to)
             self.tf_valid = True
         except Exception:
             self.tf_valid = False

@@ -5,7 +5,7 @@ Provides configurable noise models, dropout, and optional latency to stress-test
 perception and state estimation. All features can be disabled for deterministic testing.
 """
 import random
-from typing import Callable, Optional
+from typing import Callable
 
 
 def gaussian_noise(std: float, mean: float = 0.0) -> float:
@@ -59,7 +59,7 @@ def apply_scan_noise(
 
 
 def apply_depth_noise(depth_values: list, noise_std: float) -> list:
-    """Apply Gaussian noise to depth values (meters). Only modifies valid depth (d > 0); invalid stay as-is."""
+    """Apply Gaussian noise to depth (m). Valid d>0 modified; invalid stay as-is."""
     out = []
     for d in depth_values:
         if d <= 0 or d != d:  # nan or invalid

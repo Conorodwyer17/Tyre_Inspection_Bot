@@ -615,7 +615,8 @@ class VehicleInspectionManager(Node):
         try:
             save_dir = os.path.expanduser(str(self.get_parameter("save_directory").value))
         except Exception:
-            save_dir = os.path.expanduser("~/ugv_ws/tire_inspection_photos")
+            workspace = os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws"))
+            save_dir = os.path.join(workspace, "tire_inspection_photos")
         image_path = os.path.join(save_dir, filename) if filename else ""
         approach_time_s = (
             (time.time() - self._current_tire_approach_start_time)

@@ -43,9 +43,10 @@ class UltralyticsNodeCPU(Node):
 
         model_path = self.get_parameter("model_path").value
         if not model_path or not os.path.isfile(model_path):
+            workspace = os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws"))
             for cand in [
-                os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.onnx"),
-                os.path.expanduser("~/ugv_ws/best_fallback.onnx"),
+                os.path.join(workspace, "src", "Tyre_Inspection_Bot", "best_fallback.onnx"),
+                os.path.join(workspace, "best_fallback.onnx"),
             ]:
                 if os.path.isfile(cand):
                     model_path = cand

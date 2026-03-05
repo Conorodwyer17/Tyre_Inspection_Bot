@@ -24,7 +24,9 @@ class CmdVelMuxNode(Node):
 
         self.declare_parameter("cmd_vel_nav_topic", "cmd_vel_nav_source")
         self.declare_parameter("cmd_vel_centroid_topic", "/inspection/centroid_cmd_vel")
-        self.declare_parameter("centroid_servo_enable_topic", "/inspection_manager/centroid_servo_enable")
+        self.declare_parameter(
+            "centroid_servo_enable_topic", "/inspection_manager/centroid_servo_enable"
+        )
         self.declare_parameter("cmd_vel_out_topic", "cmd_vel_nav")
 
         nav_topic = self.get_parameter("cmd_vel_nav_topic").value

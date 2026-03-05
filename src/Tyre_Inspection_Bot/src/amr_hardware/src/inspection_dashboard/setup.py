@@ -16,7 +16,7 @@ setup(
     zip_safe=True,
     maintainer="inspection_dashboard",
     maintainer_email="user@example.com",
-    description="Web dashboard for inspection state, diagnostics, and mission report observability.",
+    description="Web dashboard for inspection state, diagnostics, mission report.",
     license="Apache-2.0",
     entry_points={
         "console_scripts": [

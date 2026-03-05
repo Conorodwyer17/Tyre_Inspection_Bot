@@ -20,8 +20,9 @@ def _create_tire_nodes(context, wheel_model_path):
 
     if use_cpu:
         onnx_path = wheel_model_path.replace('.pt', '.onnx')
+        workspace = os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws"))
         if not os.path.isfile(os.path.expanduser(onnx_path)):
-            onnx_path = os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.onnx")
+            onnx_path = os.path.join(workspace, "src", "Tyre_Inspection_Bot", "best_fallback.onnx")
         return [
             Node(
                 package='segmentation_3d',
@@ -172,7 +173,8 @@ def generate_launch_description():
         description='Probability (0-1) that simulated_detection skips a tire (tests PCL fallback, return-later). Use with use_stress_test.',
     )
     # TensorRT: enable by default when best_fallback.engine exists (PERFORMANCE_TUNING, acc-qcar2 pattern)
-    _engine_path = os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.engine")
+    _workspace = os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws"))
+    _engine_path = os.path.join(_workspace, "src", "Tyre_Inspection_Bot", "best_fallback.engine")
     _prefer_tensorrt_default = os.path.isfile(_engine_path)
     prefer_tensorrt_inspection_arg = DeclareLaunchArgument(
         'prefer_tensorrt_inspection',
@@ -221,8 +223,7 @@ def generate_launch_description():
     )
 
     # Wheel detection: canonical model best_fallback.pt (wheel class)
-    # Canonical path: ~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.pt
-    _bot_dir = os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot")
+    _bot_dir = os.path.join(_workspace, "src", "Tyre_Inspection_Bot")
     wheel_model_path = os.path.join(_bot_dir, "best_fallback.pt")
     # Vehicle boxes from Aurora by default; enable use_vehicle_yolo for YOLO fallback only.
     _use_vehicle_yolo = LaunchConfiguration('use_vehicle_yolo', default='false')

@@ -20,7 +20,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler
 from socketserver import TCPServer, ThreadingMixIn
-from typing import Any, Optional
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -210,9 +210,10 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(length)) if length else {}
+            if length:
+                json.loads(self.rfile.read(length))  # consume body
         except Exception:
-            body = {}
+            pass
 
         if self.path == "/api/start_mission":
             self.node.publish_start_mission()

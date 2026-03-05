@@ -87,7 +87,7 @@ def _state_name(state_id: int) -> str:
 
 def _wait_for_tf(node: Node) -> bool:
     buffer = tf2_ros.Buffer()
-    listener = tf2_ros.TransformListener(buffer, node)
+    tf2_ros.TransformListener(buffer, node)  # keeps buffer updated
     start = time.time()
     last_log = 0.0
     while (time.time() - start) < TF_WAIT_TIMEOUT_S:
@@ -128,7 +128,8 @@ def main() -> int:
         if not _wait_for_service(node, get_state, f"/{name}/get_state", SERVICE_WAIT_TIMEOUT_S):
             rclpy.shutdown()
             return 1
-        if not _wait_for_service(node, change_state, f"/{name}/change_state", SERVICE_WAIT_TIMEOUT_S):
+        if not _wait_for_service(
+                node, change_state, f"/{name}/change_state", SERVICE_WAIT_TIMEOUT_S):
             rclpy.shutdown()
             return 1
 

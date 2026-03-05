@@ -116,7 +116,7 @@ TensorRT is auto-enabled when `best_fallback.engine` exists at `~/ugv_ws/src/Tyr
 python3 -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}'); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU')"
 ```
 
-Expected: `CUDA available: True` and device name (e.g. Orin). If CUDA is missing on Jetson, install the NVIDIA ARM64 wheel (see Ultralytics assets or FINAL_VERIFICATION_AND_HANDOVER.md).
+Expected: `CUDA available: True` and device name (e.g. Orin). If CUDA is missing on Jetson, install the NVIDIA ARM64 wheel (see Ultralytics assets or [SETUP.md](SETUP.md)).
 
 **System verifier (pre-mission):** Run the Python verifier after sourcing the workspace (and optionally after the stack is up) to check TF tree, required topics, CUDA, and disk space:
 
@@ -425,8 +425,9 @@ For unattended runs (e.g. parking lot, no WiFi):
 
 1. **Install systemd service:**
    ```bash
-   sudo cp scripts/ugv_mission.service /etc/systemd/system/
-   # Edit User/Group and paths if not conor /home/conor
+   sudo ./scripts/install_service.sh [username] [workspace_path]
+   # Or manually: cp scripts/ugv_mission.service.example to /etc/systemd/system/ugv_mission.service,
+   # then sed -i 's/USER/your_username/g; s|/home/USER/ugv_ws|/path/to/ugv_ws|g' /etc/systemd/system/ugv_mission.service
    sudo systemctl daemon-reload
    sudo systemctl enable ugv_mission
    ```
@@ -460,7 +461,7 @@ Logs are written to disk (no WiFi needed). **On each mission start**, any existi
 
 Configured via PRODUCTION_CONFIG: `mission_log_path`, `mission_report_path`. After reconnecting post-mission, copy `logs/` (or just `logs/archive/`) to review all runs.
 
-**Interpreting mission reports:** Open `mission_report_latest.json`. Key fields: `success` (true if all tires captured and no errors), `tires_captured` (should be 4), `tire_capture_log` (each entry has `goal_source`: planned / detection / detection_refined, plus image_path, distance_m, timestamp), `tire_goal_sources` (list of goal sources per tire), `failures` (empty if successful; otherwise lists reasons), `mission_duration_s`. See [TESTING_AND_VALIDATION.md](docs/TESTING_AND_VALIDATION.md) for validation procedure.
+**Interpreting mission reports:** Open `mission_report_latest.json`. Key fields: `success` (true if all tires captured and no errors), `tires_captured` (should be 4), `tire_capture_log` (each entry has `goal_source`: planned / detection / detection_refined, plus image_path, distance_m, timestamp), `tire_goal_sources` (list of goal sources per tire), `failures` (empty if successful; otherwise lists reasons), `mission_duration_s`. See [docs/TESTING.md](docs/TESTING.md) for validation procedure.
 
 ---
 
@@ -522,7 +523,7 @@ To ensure simulation matches field behavior:
 | Issue | Check | Fix |
 |-------|-------|-----|
 | No vehicles detected | Aurora semantic topics | Aurora 2.11 firmware; `ros2 topic echo /slamware_ros_sdk_server_node/semantic_labels --once`; check `detection_stream_stale` or `vehicle_boxes_stream_stale` in `logs/mission_latest.jsonl` |
-| No tires detected | best_fallback.pt, tire_label | Place best_fallback.pt in Tyre_Inspection_Bot; ultralytics_tire uses inspection mode. Full class list: docs/BEST_FALLBACK_MODEL_CLASSES.md. Run `ros2 run segmentation_3d print_inspection_model_classes`; set `tire_label: wheel` in PRODUCTION_CONFIG (best_fallback.pt id=22). |
+| No tires detected | best_fallback.pt, tire_label | Place best_fallback.pt in Tyre_Inspection_Bot; ultralytics_tire uses inspection mode. Run `ros2 run segmentation_3d print_inspection_model_classes`; set `tire_label: wheel` in PRODUCTION_CONFIG (best_fallback.pt id=22). See [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md). |
 | Nav2 lifecycle fails | DDS | `export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` |
 | TF lookup failed | Aurora running | Start Aurora first; verify: `ros2 run tf2_ros tf2_echo slamware_map base_link` |
 | Mission spins / never leaves SEARCH_VEHICLE | TF or detection | Check `~/ugv_ws/logs/mission_latest.jsonl` for `tf_watchdog`; if present, TF chain is broken (Aurora not publishing odom→base_link). Fix Aurora connectivity, then re-run. |
@@ -556,9 +557,3 @@ Add:
 - **Log redirection** — `>> .../logs/mission_startup.log 2>&1` persists console output for headless runs.
 
 Adjust paths for your user and workspace. Ensure `~/.bashrc` sources ROS and `install/setup.bash`; the startup script sources the workspace.
-
----
-
-## Deep research prompt
-
-For AI-assisted web/code research (e.g. ChatGPT, Claude), use **[docs/DEEP_RESEARCH_PROMPT.md](docs/DEEP_RESEARCH_PROMPT.md)**. It fully describes the project goal, all hardware and software, what has been tried, known issues, and instructs the AI to find existing sources, code, and fixes (Nav2, Aurora, costmap, TF, clustering, inspection missions). Copy the prompt (or sections) into the assistant and ask it to search and cite concrete references and actionable suggestions.

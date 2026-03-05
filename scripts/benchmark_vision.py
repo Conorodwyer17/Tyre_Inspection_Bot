@@ -5,6 +5,7 @@ Runs N iterations and records min/avg/max inference time and GPU memory.
 Run on the Jetson: cd ~/ugv_ws && python3 scripts/benchmark_vision.py
 Output: docs/vision_benchmark_results.md
 """
+import argparse
 import os
 import sys
 import time
@@ -48,7 +49,13 @@ def get_gpu_memory_mb():
     return 0.0
 
 def main():
-    model_path = find_model()
+    parser = argparse.ArgumentParser(description="Benchmark YOLO inference for tyre inspection")
+    parser.add_argument("--model", default="", help="Model path (default: auto-detect best_fallback.pt/.engine)")
+    parser.add_argument("--iterations", type=int, default=1000, help="Number of inference iterations")
+    parser.add_argument("--input_size", type=int, default=640, help="Input image size (width=height)")
+    args = parser.parse_args()
+
+    model_path = args.model if args.model and os.path.isfile(args.model) else find_model()
     if not model_path:
         print("No best_fallback.pt or .engine found. Run export_tensorrt.sh on the Jetson first.")
         sys.exit(1)
@@ -62,9 +69,9 @@ def main():
     print(f"Loading model: {model_path}")
     model = YOLO(model_path)
     device = "cuda:0" if __import__("torch").cuda.is_available() else "cpu"
-    imgsz = 640
-    n_iter = 1000
-    warmup = 50
+    imgsz = args.input_size
+    n_iter = args.iterations
+    warmup = min(50, n_iter // 20)
 
     import numpy as np
     dummy = np.zeros((imgsz, imgsz, 3), dtype=np.uint8)

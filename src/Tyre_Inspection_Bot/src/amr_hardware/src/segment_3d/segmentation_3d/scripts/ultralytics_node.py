@@ -164,11 +164,12 @@ class UltralyticsSegmentationNode(Node):
         self.get_logger().info(f"Loading inspection model: {insp_model_path}")
         resolved_insp_path = insp_model_path
         if not os.path.exists(insp_model_path):
+            workspace = os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws"))
             for candidate in [
-                os.path.expanduser("~/ugv_ws/best_fallback.pt"),
-                os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.pt"),
-                os.path.expanduser("~/ugv_ws/best_fallback.engine"),
-                os.path.expanduser("~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.engine"),
+                os.path.join(workspace, "best_fallback.pt"),
+                os.path.join(workspace, "src", "Tyre_Inspection_Bot", "best_fallback.pt"),
+                os.path.join(workspace, "best_fallback.engine"),
+                os.path.join(workspace, "src", "Tyre_Inspection_Bot", "best_fallback.engine"),
             ]:
                 if os.path.exists(candidate):
                     resolved_insp_path = candidate

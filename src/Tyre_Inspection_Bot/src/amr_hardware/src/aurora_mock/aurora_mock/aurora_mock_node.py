@@ -20,7 +20,6 @@ import math
 import struct
 import sys
 import time
-import numpy as np
 import rclpy
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
@@ -296,6 +295,7 @@ class AuroraMockNode(Node):
 
         if self._odom_latency_ms > 0:
             publish_at_ns = now.nanoseconds + int(self._odom_latency_ms * 1e6)
+
             def _publish_odom_delayed(m=msg, tf=t, stamp_ns=stamp.nanoseconds):
                 self._odom_pub.publish(m)
                 self._tf_broadcaster.sendTransform(tf)

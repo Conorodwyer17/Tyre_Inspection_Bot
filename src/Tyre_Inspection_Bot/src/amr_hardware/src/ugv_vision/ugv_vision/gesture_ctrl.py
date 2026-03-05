@@ -69,61 +69,27 @@ class GestureCtrl(Node):
         self.get_logger().info('Result: {0}'.format(result.result))
                 
     def detect_gesture(self, hand_landmarks):
-        # Initialize a list to store the landmarks
-        lmlist=[]
-        # Initialize a list to store the tip ids
-        tipids=[4,8,12,16,20]
+        """Detect finger count from hand landmarks."""
+        lmlist = []
+        tipids = [4, 8, 12, 16, 20]
+        h, w = 480, 640
 
-        # Loop through the landmarks
-        for id,lm in enumerate(hand_landmarks.landmark):
-          
-          # Get the height, width, and channels of the image
-          h,w,c= 480,640,3
-          # Get the x and y coordinates of the landmark
-          cx,cy=int(lm.x * w) , int(lm.y * h)
-          # Add the landmark to the list
-          lmlist.append([id,cx,cy])
-          # Check if the list is not empty and has 21 landmarks
-          if len(lmlist) != 0 and len(lmlist)==21:
-              # Initialize a list to store the finger states
-              fingerlist=[]
-              
-              #thumb and dealing with flipping of hands
-              # Check if the x coordinate of the thumb landmark is greater than the x coordinate of the index finger landmark
-              if lmlist[12][1] > lmlist[20][1]:
-                  # Check if the x coordinate of the thumb tip landmark is greater than the x coordinate of the thumb landmark
-                  if lmlist[tipids[0]][1] > lmlist[tipids[0]-1][1]:
-                      # Add 1 to the fingerlist
-                      fingerlist.append(1)
-                  else:
-                      # Add 0 to the fingerlist
-                      fingerlist.append(0)
-              else:
-                  # Check if the x coordinate of the thumb tip landmark is less than the x coordinate of the thumb landmark
-                  if lmlist[tipids[0]][1] < lmlist[tipids[0]-1][1]:
-                      # Add 1 to the fingerlist
-                      fingerlist.append(1)
-                  else:
-                      # Add 0 to the fingerlist
-                      fingerlist.append(0)
-              
-              #others
-              # Loop through the other fingers
-              for id in range (1,5):
-                  # Check if the y coordinate of the finger tip landmark is less than the y coordinate of the finger landmark
-                  if lmlist[tipids[id]][2] < lmlist[tipids[id]-2][2]:
-                      # Add 1 to the fingerlist
-                      fingerlist.append(1)
-                  else:
-                      # Add 0 to the fingerlist
-                      fingerlist.append(0)
-              
-              # Check if the fingerlist is not empty
-              if len(fingerlist)!=0:
-                  # Get the number of fingers that are open
-                  fingercount=fingerlist.count(1)
-                  # Return the number of fingers that are open
-                  return fingercount
+        for idx, lm in enumerate(hand_landmarks.landmark):
+            cx = int(lm.x * w)
+            cy = int(lm.y * h)
+            lmlist.append([idx, cx, cy])
+            if len(lmlist) == 21:
+                fingerlist = []
+                if lmlist[12][1] > lmlist[20][1]:
+                    fingerlist.append(1 if lmlist[tipids[0]][1] > lmlist[tipids[0]-1][1] else 0)
+                else:
+                    fingerlist.append(1 if lmlist[tipids[0]][1] < lmlist[tipids[0]-1][1] else 0)
+                for i in range(1, 5):
+                    fingerlist.append(
+                        1 if lmlist[tipids[i]][2] < lmlist[tipids[i]-2][2] else 0
+                    )
+                if fingerlist:
+                    return fingerlist.count(1)
    
     def image_callback(self, msg):
         # Convert the ROS Image message to an OpenCV image
