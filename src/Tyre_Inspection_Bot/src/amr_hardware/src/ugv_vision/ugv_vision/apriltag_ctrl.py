@@ -75,7 +75,6 @@ class ApriltagCtrl(Node):
 
         # Detect apriltags in the image
         results = self.detector.detect(gray)
-        #print(results)
         for r in results:
             # Get the corners of the apriltag
             corners = r['lb-rb-rt-lt'].astype(int)
@@ -88,24 +87,22 @@ class ApriltagCtrl(Node):
             # Draw a circle at the center of the apriltag
             cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
         
-            # Print the tag ID and center coordinates
-            print(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
-        
-            # Send a goal to the action server based on the tag ID
+            self.get_logger().debug(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
+
             if r['id'] == 1:
-                print("turn right")
+                self.get_logger().debug("turn right")
                 data = [{"T": 1, "type": "spin", "data": -1}]
             elif r['id'] == 2:
-                print("turn left")
+                self.get_logger().debug("turn left")
                 data = [{"T": 1, "type": "spin", "data": 1}]
             elif r['id'] == 3:
-                print("move forward")
+                self.get_logger().debug("move forward")
                 data = [{"T": 1, "type": "drive_on_heading", "data": 0.01}]
             elif r['id'] == 4:
-                print("move back")
+                self.get_logger().debug("move back")
                 data = [{"T": 1, "type": "back_up", "data": 0.01}]
             else:
-                print("stop")
+                self.get_logger().debug("stop")
                 data = [{"T": 1, "type": "stop", "data": 0}]
         
             # Convert the data to a JSON string

@@ -140,25 +140,24 @@ class GestureCtrl(Node):
                 # Draw the landmarks on the image
                 mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
                 # Detect the gesture
-                gesture_type = self.detect_gesture(hand_landmarks)        
-                print(gesture_type)
-                
-                # Check the gesture type and send the corresponding goal
-                if gesture_type == 1: 
-                    print("turn right")
+                gesture_type = self.detect_gesture(hand_landmarks)
+                self.get_logger().debug(f"Gesture: {gesture_type}")
+
+                if gesture_type == 1:
+                    self.get_logger().debug("turn right")
                     data = [{"T": 1, "type": "spin", "data": -1}]
-                elif gesture_type == 2: 
-                    print("turn left")
+                elif gesture_type == 2:
+                    self.get_logger().debug("turn left")
                     data = [{"T": 1, "type": "spin", "data": 1}]
                 else:
                     if gesture_type == 3:
-                        print("move forward")
+                        self.get_logger().debug("move forward")
                         data = [{"T": 1, "type": "drive_on_heading", "data": 0.01}]
                     elif gesture_type == 4:
-                        print("move back")
+                        self.get_logger().debug("move back")
                         data = [{"T": 1, "type": "back_up", "data": 0.01}]
                     else:
-                        print("stop")
+                        self.get_logger().debug("stop")
                         data = [{"T": 1, "type": "stop", "data": 0}]
 
                 # Convert the data to a json string

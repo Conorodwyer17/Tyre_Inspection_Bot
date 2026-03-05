@@ -29,7 +29,7 @@ class TransformProcessor(Node):
         try:
             now = rclpy.time.Time()
             trans: TransformStamped = self.tf_buffer.lookup_transform('base_footprint', 'dock_frame', now)
-            print(trans.transform.translation)
+            self.get_logger().debug(f"Transform: {trans.transform.translation}")
             # Extract position and orientation from the transform
             x = trans.transform.translation.x
             y = trans.transform.translation.y
