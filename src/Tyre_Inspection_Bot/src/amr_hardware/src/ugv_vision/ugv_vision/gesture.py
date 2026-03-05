@@ -2,12 +2,10 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import String
 from cv_bridge import CvBridge
 
 import cv2
 import numpy as np
-import json
 import mediapipe as mp
 
 # Initialize the mediapipe hands module
@@ -22,61 +20,36 @@ class GestureCtrl(Node):
         # Initialize the node
         super().__init__('gesture_ctrl')
         # Create a subscription to the image_raw topic
-        self.image_raw_subscription = self.create_subscription(Image,'/image_raw', self.image_callback,10)
+        self.image_raw_subscription = self.create_subscription(
+            Image, '/image_raw', self.image_callback, 10
+        )
         # Create a publisher to the gesture_ctrl/result topic
         self.gesture_ctrl_publisher = self.create_publisher(Image, '/gesture_ctrl/result', 10)
         # Create a CvBridge object
         self.bridge = CvBridge()
       
-    # Define the function to detect the gesture
     def detect_gesture(self, hand_landmarks):
-        lmlist=[]
-        tipids=[4,8,12,16,20]
+        """Detect finger count from hand landmarks."""
+        lmlist = []
+        tipids = [4, 8, 12, 16, 20]
+        h, w = 480, 640
 
-        # Loop through the hand landmarks
-        for id,lm in enumerate(hand_landmarks.landmark):
-          
-          h,w,c= 480,640,3
-          # Calculate the center of the landmark
-          cx,cy=int(lm.x * w) , int(lm.y * h)
-          # Append the landmark to the list
-          lmlist.append([id,cx,cy])
-          # If the list is not empty and has 21 landmarks
-          if len(lmlist) != 0 and len(lmlist)==21:
-              fingerlist=[]
-              
-              #thumb and dealing with flipping of hands
-              # If the x-coordinate of the 12th landmark is greater than the x-coordinate of the 20th landmark
-              if lmlist[12][1] > lmlist[20][1]:
-                  # If the x-coordinate of the 4th landmark is greater than the x-coordinate of the 3rd landmark
-                  if lmlist[tipids[0]][1] > lmlist[tipids[0]-1][1]:
-                      fingerlist.append(1)
-                  else:
-                      fingerlist.append(0)
-              # If the x-coordinate of the 12th landmark is less than the x-coordinate of the 20th landmark
-              else:
-                  # If the x-coordinate of the 4th landmark is less than the x-coordinate of the 3rd landmark
-                  if lmlist[tipids[0]][1] < lmlist[tipids[0]-1][1]:
-                      fingerlist.append(1)
-                  else:
-                      fingerlist.append(0)
-              
-              #others
-              # Loop through the tipids list
-              for id in range (1,5):
-                  # If the y-coordinate of the current landmark is less than the y-coordinate of the previous landmark
-                  if lmlist[tipids[id]][2] < lmlist[tipids[id]-2][2]:
-                      fingerlist.append(1)
-                  else:
-                      fingerlist.append(0)
-              
-              
-              # If the fingerlist is not empty
-              if len(fingerlist)!=0:
-                  # Count the number of 1s in the fingerlist
-                  fingercount=fingerlist.count(1)
-                  # Return the fingercount
-                  return fingercount
+        for idx, lm in enumerate(hand_landmarks.landmark):
+            cx = int(lm.x * w)
+            cy = int(lm.y * h)
+            lmlist.append([idx, cx, cy])
+            if len(lmlist) == 21:
+                fingerlist = []
+                if lmlist[12][1] > lmlist[20][1]:
+                    fingerlist.append(1 if lmlist[tipids[0]][1] > lmlist[tipids[0]-1][1] else 0)
+                else:
+                    fingerlist.append(1 if lmlist[tipids[0]][1] < lmlist[tipids[0]-1][1] else 0)
+                for i in range(1, 5):
+                    fingerlist.append(
+                        1 if lmlist[tipids[i]][2] < lmlist[tipids[i]-2][2] else 0
+                    )
+                if fingerlist:
+                    return fingerlist.count(1)
                    
     # Define the callback function for the image_raw topic
     def image_callback(self, msg):
@@ -97,7 +70,7 @@ class GestureCtrl(Node):
                 self.get_logger().debug(f"Gesture: {gesture_type}")
             
         # Convert the image back to a message
-        result_img_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")                                                                                      
+        result_img_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
         # Publish the message
         self.gesture_ctrl_publisher.publish(result_img_msg)
         # Show the image

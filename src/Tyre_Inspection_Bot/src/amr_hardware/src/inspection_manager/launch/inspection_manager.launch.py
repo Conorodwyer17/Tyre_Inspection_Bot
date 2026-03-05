@@ -66,7 +66,10 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "params_file",
-                default_value=os.path.join(os.path.expanduser("~/ugv_ws"), "PRODUCTION_CONFIG.yaml"),
+                default_value=os.path.join(
+                    os.environ.get("UGV_WS", os.path.expanduser("~/ugv_ws")),
+                    "PRODUCTION_CONFIG.yaml",
+                ),
                 description="Path to PRODUCTION_CONFIG for inspection_manager and photo_capture_service",
             ),
             DeclareLaunchArgument(

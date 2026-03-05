@@ -5,7 +5,7 @@ Generates points on a simplified vehicle model: box body + 4 cylindrical wheels.
 Used to produce realistic depth and point cloud for segment_3d and tire detection.
 """
 import math
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import numpy as np
 

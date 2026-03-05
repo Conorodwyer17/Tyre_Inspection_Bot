@@ -41,8 +41,7 @@ Note: `full_bringup.launch.py` does not fully support mock mode; it is intended 
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Consolidated troubleshooting guide |
 | [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md) | Tyre detection pipeline, OOM workarounds, CPU inference |
 | [docs/SIMULATION_RESULTS.md](docs/SIMULATION_RESULTS.md) | Simulation outcomes |
-| [docs/REPOSITORY_CLEANUP_PLAN.md](docs/REPOSITORY_CLEANUP_PLAN.md) | Repository cleanup plan |
-| [docs/100_PERCENT_RELIABILITY_PLAN.md](docs/100_PERCENT_RELIABILITY_PLAN.md) | Reliability plan |
+| [docs/vision_benchmark_results.md](docs/vision_benchmark_results.md) | Vision inference benchmark |
 | [SETUP.md](SETUP.md) | Fresh Jetson installation guide (JetPack 6.0, ROS 2, TensorRT) |
 
 ## Installation
@@ -54,4 +53,4 @@ Note: `full_bringup.launch.py` does not fully support mock mode; it is intended 
 5. Build: `colcon build --symlink-install && source install/setup.bash`
 6. Place `best_fallback.pt` or `best_fallback.engine` (tyre model) in `src/Tyre_Inspection_Bot/`. On Jetson, run `scripts/export_tensorrt.sh` to build the TensorRT engine for fast inference.
 
-See [SETUP.md](SETUP.md) for detailed Jetson installation and [src/Tyre_Inspection_Bot/README.md](src/Tyre_Inspection_Bot/README.md) for manual launch steps.
+See [SETUP.md](SETUP.md) for detailed Jetson installation and [RUNBOOK.md](RUNBOOK.md) for launch steps.

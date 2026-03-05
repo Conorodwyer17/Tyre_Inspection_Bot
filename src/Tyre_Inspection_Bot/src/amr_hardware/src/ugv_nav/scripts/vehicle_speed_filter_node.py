@@ -11,7 +11,6 @@ slowing the robot when it enters the buffer zone around detected vehicles.
 
 Evidence: nav2_costmap_2d SpeedFilter, nav2_system_tests speed_local_params.yaml
 """
-import math
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import OccupancyGrid
@@ -42,13 +41,18 @@ class VehicleSpeedFilterNode(Node):
         self._width_m = self.get_parameter("mask_width_m").value
         self._height_m = self.get_parameter("mask_height_m").value
         self._buffer = self.get_parameter("vehicle_buffer_m").value
-        self._speed_percent = max(1, min(100, self.get_parameter("speed_percent_in_zone").value))
+        sp = self.get_parameter("speed_percent_in_zone").value
+        self._speed_percent = max(1, min(100, sp))
         self._rate_hz = self.get_parameter("publish_rate_hz").value
 
         self._latest_boxes = None
 
         from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-        qos = QoSProfile(reliability=ReliabilityPolicy.RELIABLE, history=HistoryPolicy.KEEP_LAST, depth=5)
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=5,
+        )
         # Nav2 SpeedFilter expects TRANSIENT_LOCAL for mask and filter info (matches costmap layer)
         filter_qos = QoSProfile(
             depth=1,
@@ -60,8 +64,10 @@ class VehicleSpeedFilterNode(Node):
         self._sub = self.create_subscription(
             BoundingBoxes3d, self._vehicle_boxes_topic, self._boxes_cb, qos
         )
-        self._mask_pub = self.create_publisher(OccupancyGrid, self._filter_mask_topic, filter_qos)
-        self._info_pub = self.create_publisher(CostmapFilterInfo, self._filter_info_topic, filter_qos)
+        self._mask_pub = self.create_publisher(
+            OccupancyGrid, self._filter_mask_topic, filter_qos)
+        self._info_pub = self.create_publisher(
+            CostmapFilterInfo, self._filter_info_topic, filter_qos)
 
         self._info_published = False
         period_ns = int(1e9 / self._rate_hz)

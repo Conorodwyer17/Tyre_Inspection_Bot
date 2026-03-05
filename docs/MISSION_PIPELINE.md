@@ -93,7 +93,7 @@ Published to `/segmentation_mode`. segment_3d dual-stream runs both vehicle and 
 | vehicle_detection_topic | vehicle_detection_topic |
 | vehicle_fallback_topic | vehicle_boxes_topic |
 
-**tire_label:** Must match best_fallback.pt output exactly. best_fallback.pt uses **wheel** (id=22). Set `tire_label: wheel` in PRODUCTION_CONFIG. Full class list: [docs/BEST_FALLBACK_MODEL_CLASSES.md](BEST_FALLBACK_MODEL_CLASSES.md). To verify: `ros2 run segmentation_3d print_inspection_model_classes`.
+**tire_label:** Must match best_fallback.pt output exactly. best_fallback.pt uses **wheel** (id=22). Set `tire_label: wheel` in PRODUCTION_CONFIG. To verify classes: `ros2 run segmentation_3d print_inspection_model_classes`. See [docs/TIRE_DETECTION_TROUBLESHOOTING.md](TIRE_DETECTION_TROUBLESHOOTING.md) for class index issues.
 
 ---
 
