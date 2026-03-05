@@ -7,25 +7,18 @@ High-level mission flow for the autonomous tyre inspection robot. For the full s
 ## Mission Flow (Simplified)
 
 ```mermaid
-flowchart TD
-    Start([Start]) --> IDLE
+graph TD
     IDLE -->|Start mission| SEARCH_VEHICLE
-    SEARCH_VEHICLE -->|Vehicle detected| APPROACH_VEHICLE
+    SEARCH_VEHICLE -->|Vehicle detected| WAIT_VEHICLE_BOX
+    WAIT_VEHICLE_BOX -->|Vehicle committed| APPROACH_VEHICLE
     APPROACH_VEHICLE -->|Goal reached| INSPECT_TIRE
-
-    subgraph TyreLoop["Tyre Inspection Loop"]
-        direction TB
-        INSPECT_TIRE --> ALL_TYRES{{"All 4 tyres done?"}}
-        ALL_TYRES -->|No| INSPECT_TIRE
-        ALL_TYRES -->|Yes| MORE_VEHICLES{{"More vehicles?"}}
-    end
-
-    MORE_VEHICLES -->|No| DONE([Done])
-    MORE_VEHICLES -->|Yes| SEARCH_VEHICLE
-
-    SEARCH_VEHICLE -->|Timeout / failure| ERROR([Error])
-    APPROACH_VEHICLE -->|Timeout / failure| ERROR
-    INSPECT_TIRE -->|Failure| ERROR
+    INSPECT_TIRE -->|Position adjusted| FACE_TIRE
+    FACE_TIRE -->|Wheel detected| VERIFY_CAPTURE
+    VERIFY_CAPTURE -->|Photo OK| NEXT_TYRE
+    NEXT_TYRE -->|More tyres| INSPECT_TIRE
+    NEXT_TYRE -->|All tyres done| DONE
+    INSPECT_TIRE -->|Timeout/error| ERROR
+    ERROR -->|Recovery| IDLE
 ```
 
 ---
@@ -33,7 +26,6 @@ flowchart TD
 ## Notes
 
 - **Tyre order:** Nearest first, then 2nd, 3rd, 4th nearest (Nav2 paths around the vehicle).
-- **Per tyre:** Navigate → face tyre → capture photo → verify → next.
-- **Multi-vehicle:** After 4 tyres, the mission can search for the next vehicle or finish.
+- **Per tyre:** INSPECT_TIRE → FACE_TIRE → VERIFY_CAPTURE → NEXT_TYRE (loop until all 4 done).
 
 See [MISSION_PIPELINE.md](MISSION_PIPELINE.md) for phase details and [RUNBOOK.md](../RUNBOOK.md) for operations.
