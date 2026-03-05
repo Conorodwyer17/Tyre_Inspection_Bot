@@ -90,25 +90,23 @@ class ApriltagTracker(Node):
             # Draw a circle at the center of the apriltag
             cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
 
-            # Print the tag ID and center coordinates
-            print(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
+            self.get_logger().debug(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
 
-            # Determine the command to send based on the center coordinates
-            if (center_x - 320) > 30: 
-                print("turn right")
+            if (center_x - 320) > 30:
+                self.get_logger().debug("turn right")
                 data = [{"T": 1, "type": "spin", "data": -1}]
-            elif (320 - center_x) > 30: 
-                print("turn left")
+            elif (320 - center_x) > 30:
+                self.get_logger().debug("turn left")
                 data = [{"T": 1, "type": "spin", "data": 1}]
             else:
                 if (240 - center_y) > 30:
-                    print("move forward")
+                    self.get_logger().debug("move forward")
                     data = [{"T": 1, "type": "drive_on_heading", "data": 0.01}]
                 elif (center_y - 240) > 30:
-                    print("move back")
+                    self.get_logger().debug("move back")
                     data = [{"T": 1, "type": "back_up", "data": 0.01}]
                 else:
-                    print("stop")
+                    self.get_logger().debug("stop")
                     data = [{"T": 1, "type": "stop", "data": 0}]
 
             # Convert the command to a JSON string

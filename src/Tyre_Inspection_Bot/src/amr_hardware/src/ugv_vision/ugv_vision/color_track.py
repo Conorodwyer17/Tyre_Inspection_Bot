@@ -121,22 +121,21 @@ class ColorTracker(Node):
                 self.get_logger().info(f'Tracking block at ({cx}, {cy})')
                 
                 # Check if the center of the rectangle is within a certain range of the center of the image
-                if (cx - 320) > 30: 
-                    print("turn right")
+                if (cx - 320) > 30:
+                    self.get_logger().debug("turn right")
                     data = [{"T": 1, "type": "spin", "data": -1}]
-                elif (320 - cx) > 30: 
-                    print("turn left")
+                elif (320 - cx) > 30:
+                    self.get_logger().debug("turn left")
                     data = [{"T": 1, "type": "spin", "data": 1}]
                 else:
-                    # Check if the center of the rectangle is within a certain range of the center of the image
                     if (240 - cy) > 30:
-                        print("move forward")
+                        self.get_logger().debug("move forward")
                         data = [{"T": 1, "type": "drive_on_heading", "data": 0.01}]
                     elif (cy - 240) > 30:
-                        print("move back")
+                        self.get_logger().debug("move back")
                         data = [{"T": 1, "type": "back_up", "data": 0.01}]
                     else:
-                        print("stop")
+                        self.get_logger().debug("stop")
                         data = [{"T": 1, "type": "stop", "data": 0}]
 
                 # Convert the data to a JSON string

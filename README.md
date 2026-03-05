@@ -38,6 +38,7 @@ Note: `full_bringup.launch.py` does not fully support mock mode; it is intended 
 | [RUNBOOK.md](RUNBOOK.md) | Operations runbook, canonical stack, mission flow |
 | [docs/MISSION_PIPELINE.md](docs/MISSION_PIPELINE.md) | Mission flow: approach vehicle → tyre inspection → photo |
 | [docs/ACCEPTANCE_CRITERIA.md](docs/ACCEPTANCE_CRITERIA.md) | Acceptance criteria for live mission |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Consolidated troubleshooting guide |
 | [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md) | Tyre detection pipeline, OOM workarounds, CPU inference |
 | [docs/SIMULATION_RESULTS.md](docs/SIMULATION_RESULTS.md) | Simulation outcomes |
 | [docs/REPOSITORY_CLEANUP_PLAN.md](docs/REPOSITORY_CLEANUP_PLAN.md) | Repository cleanup plan |

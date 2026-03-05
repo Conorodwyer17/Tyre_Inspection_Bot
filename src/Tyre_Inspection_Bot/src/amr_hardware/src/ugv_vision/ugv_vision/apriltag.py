@@ -49,8 +49,7 @@ class ApriltagCtrl(Node):
             # Draw a circle at the center of the apriltag
             cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
         
-            # Print the ID and center of the apriltag
-            print(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
+            self.get_logger().debug(f'Tag ID: {r["id"]}, Center: ({center_x}, {center_y})')
 
         # Convert the OpenCV image back to a ROS Image message
         result_img_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")                                                                                      
@@ -62,10 +61,7 @@ class ApriltagCtrl(Node):
         cv2.waitKey(1)
 
 def main(args=None):
-    # Initialize the ROS client library
     rclpy.init(args=args)
-    apriltag_ctrl = Apriltagctrl()
-    # Create an instance of the ApriltagCtrl node
     apriltag_ctrl = ApriltagCtrl()
     # Spin the node
     rclpy.spin(apriltag_ctrl)

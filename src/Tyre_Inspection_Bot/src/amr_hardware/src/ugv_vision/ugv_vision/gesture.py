@@ -93,10 +93,8 @@ class GestureCtrl(Node):
             for hand_landmarks in results.multi_hand_landmarks:
                 # Draw the hand landmarks on the image
                 mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-                # Detect the gesture
-                gesture_type = self.detect_gesture(hand_landmarks)        
-                # Print the gesture type
-                print(gesture_type)
+                gesture_type = self.detect_gesture(hand_landmarks)
+                self.get_logger().debug(f"Gesture: {gesture_type}")
             
         # Convert the image back to a message
         result_img_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")                                                                                      
