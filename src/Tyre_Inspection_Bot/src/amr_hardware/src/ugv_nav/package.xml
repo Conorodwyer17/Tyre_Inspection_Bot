@@ -18,6 +18,8 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>slamware_ros_sdk</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>ugv_description</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
   <!-- Optional: for ekf_aurora.launch.py (sensor fusion); install: ros-humble-robot-localization -->
   <exec_depend>robot_localization</exec_depend>
 

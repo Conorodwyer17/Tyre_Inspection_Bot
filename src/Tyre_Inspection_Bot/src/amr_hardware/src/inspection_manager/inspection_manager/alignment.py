@@ -61,7 +61,10 @@ class VisualServoAlignServer(Node):
 
     def _pose_error(self, target_x: float, target_y: float, target_yaw: float) -> Optional[Tuple[float, float]]:
         try:
-            tf = self.tf_buffer.lookup_transform(self.target_frame, self.base_frame, rclpy.time.Time())
+            tf = self.tf_buffer.lookup_transform(
+                self.target_frame, self.base_frame, rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.5),
+            )
         except Exception:
             return None
         x = tf.transform.translation.x

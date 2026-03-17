@@ -1,5 +1,6 @@
 # Copyright 2024-2026 UGV Tire Inspection
 # Launch SLAMTEC Aurora SDK node (slamware_ros_sdk) + aurora_sdk_bridge (depth pipeline).
+# Uses robot_state_publisher + URDF for sensor transforms (fixes TF timestamp extrapolation errors).
 
 import os
 import sys
@@ -81,6 +82,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="map_to_slamware_map",
+        parameters=[{"use_sim_time": False}],
         arguments=[
             "--x", "0",
             "--y", "0",
@@ -98,6 +100,7 @@ def generate_launch_description():
         package="tf2_ros",
         executable="static_transform_publisher",
         name="odom2map",
+        parameters=[{"use_sim_time": False}],
         arguments=[
             "--x", "0",
             "--y", "0",
@@ -110,71 +113,21 @@ def generate_launch_description():
             "--child-frame-id", "odom",
         ],
     )
-    # Camera and IMU frames (adjust if your URDF differs)
-    leftcam2base = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="leftcam2base",
-        arguments=[
-            "--x", "0.0418",
-            "--y", "0.03",
-            "--z", "0",
-            "--qx", "-0.5",
-            "--qy", "0.5",
-            "--qz", "-0.5",
-            "--qw", "0.5",
-            "--frame-id", "base_link",
-            "--child-frame-id", "camera_left",
-        ],
-    )
-    rightcam2leftcam = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="rightcam2Leftcam",
-        arguments=[
-            "--x", "0.06",
-            "--y", "0",
-            "--z", "0",
-            "--qx", "0",
-            "--qy", "0",
-            "--qz", "0",
-            "--qw", "1",
-            "--frame-id", "camera_left",
-            "--child-frame-id", "camera_right",
-        ],
-    )
-    imu2leftcam = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="imu2Leftcam",
-        arguments=[
-            "--x", "0.03",
-            "--y", "0",
-            "--z", "0",
-            "--qx", "0",
-            "--qy", "0",
-            "--qz", "-0.7071068",
-            "--qw", "0.7071068",
-            "--frame-id", "camera_left",
-            "--child-frame-id", "imu_link",
-        ],
-    )
-    # Aurora depth image uses camera_depth_optical_frame; align with camera_left
-    depth_optical2left = Node(
-        package="tf2_ros",
-        executable="static_transform_publisher",
-        name="depth_optical2left",
-        arguments=[
-            "--x", "0",
-            "--y", "0",
-            "--z", "0",
-            "--qx", "0",
-            "--qy", "0",
-            "--qz", "0",
-            "--qw", "1",
-            "--frame-id", "camera_left",
-            "--child-frame-id", "camera_depth_optical_frame",
-        ],
+    # Robot state publisher: URDF-based transforms for camera_left, camera_right, imu_link,
+    # camera_depth_optical_frame, base_footprint. Ensures correct timestamps (fixes TF extrapolation).
+    ugv_desc_share = get_package_share_directory("ugv_description")
+    robot_description_path = os.path.join(ugv_desc_share, "urdf", "ugv_rover.urdf")
+    with open(robot_description_path, "r") as f:
+        robot_description = f.read()
+    robot_state_publisher = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="screen",
+        parameters=[{
+            "robot_description": robot_description,
+            "use_sim_time": False,
+        }],
     )
 
     bridge_launch = IncludeLaunchDescription(
@@ -216,10 +169,7 @@ def generate_launch_description():
         slamware_node,
         map2slamware,
         odom2map,
-        leftcam2base,
-        rightcam2leftcam,
-        imu2leftcam,
-        depth_optical2left,
+        robot_state_publisher,
         bridge_launch,
         nav_permitted_pub,
     ])

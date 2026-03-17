@@ -15,7 +15,7 @@ TF_STALE = "tf_stale"
 TF_FALLBACK_LATEST = "tf_fallback_latest"  # Stamp was future; used latest available
 
 
-def lookup_transform(tf_buffer, target_frame: str, source_frame: str, timeout_s: float = 0.2):
+def lookup_transform(tf_buffer, target_frame: str, source_frame: str, timeout_s: float = 0.5):
     """Lookup a transform with a bounded timeout. Returns TransformStamped or None."""
     try:
         return tf_buffer.lookup_transform(
@@ -33,7 +33,7 @@ def lookup_transform_at_stamp(
     target_frame: str,
     source_frame: str,
     stamp,  # rclpy.time.Time
-    timeout_s: float = 0.2,
+    timeout_s: float = 0.5,
     logger=None,
 ):
     """Lookup transform at a specific time (e.g. detection message stamp). Returns TransformStamped or None.
@@ -68,7 +68,7 @@ def check_tf_validity(
     map_frame: str,
     base_frame: str,
     stamp=None,
-    timeout_s: float = 0.2,
+    timeout_s: float = 0.5,
     fallback_to_latest: bool = True,
 ) -> Tuple[bool, str]:
     """
@@ -106,7 +106,7 @@ def get_current_pose(
     tf_buffer,
     world_frame: str,
     base_frame: str,
-    timeout_s: float = 0.2,
+    timeout_s: float = 0.5,
     logger=None,
 ) -> Optional[PoseStamped]:
     """Get current robot pose in world_frame. Returns PoseStamped or None."""
@@ -129,7 +129,7 @@ def transform_pose(
     tf_buffer,
     pose: PoseStamped,
     target_frame: str,
-    timeout_s: float = 0.2,
+    timeout_s: float = 0.5,
     logger=None,
 ) -> Optional[PoseStamped]:
     """Transform PoseStamped to target_frame. Returns transformed pose or None."""

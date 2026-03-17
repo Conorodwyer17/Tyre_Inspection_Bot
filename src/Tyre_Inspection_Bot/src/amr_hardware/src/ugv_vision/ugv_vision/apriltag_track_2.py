@@ -25,7 +25,10 @@ class TransformProcessor(Node):
             now = rclpy.time.Time()
 
             # Lookup the transformation from 'dock_frame' to 'map' at the current time
-            trans: TransformStamped = self.tf_buffer.lookup_transform('map', 'dock_frame',now)
+            trans: TransformStamped = self.tf_buffer.lookup_transform(
+                'map', 'dock_frame', now,
+                timeout=rclpy.duration.Duration(seconds=0.5),
+            )
 
             # Print the transformation for debugging
             self.get_logger().info(f'Transformation: {trans.transform.translation}')

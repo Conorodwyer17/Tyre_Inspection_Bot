@@ -93,7 +93,8 @@ def _wait_for_tf(node: Node) -> bool:
     while (time.time() - start) < TF_WAIT_TIMEOUT_S:
         try:
             buffer.lookup_transform(
-                TF_TARGET_FRAME, TF_SOURCE_FRAME, rclpy.time.Time()
+                TF_TARGET_FRAME, TF_SOURCE_FRAME, rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.5),
             )
             node.get_logger().info(
                 f"TF ready: {TF_TARGET_FRAME} -> {TF_SOURCE_FRAME}"

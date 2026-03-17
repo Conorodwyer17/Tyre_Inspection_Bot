@@ -722,7 +722,8 @@ class VehicleInspectionManager(Node):
             try:
                 t_start = time.perf_counter()
                 transform = self.tf_buffer.lookup_transform(
-                    world_frame, base_frame, rclpy.time.Time()
+                    world_frame, base_frame, rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=0.5),
                 )
                 tf_latency_ms = (time.perf_counter() - t_start) * 1000
                 tf_valid = True
@@ -878,7 +879,10 @@ class VehicleInspectionManager(Node):
         timeout = self.get_parameter("tf_watchdog_timeout").value
         abort_s = self.get_parameter("tf_unavailable_abort_s").value
         try:
-            self.tf_buffer.lookup_transform(world_frame, base_frame, rclpy.time.Time())
+            self.tf_buffer.lookup_transform(
+                world_frame, base_frame, rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.5),
+            )
             self._tf_last_valid_time = time.time()
             self._tf_watchdog_paused = False
             self._tf_watchdog_paused_since = None
@@ -1514,7 +1518,10 @@ class VehicleInspectionManager(Node):
         map_frame = self.get_parameter("map_frame").value
         if self.get_parameter("require_goal_transform").value:
             try:
-                self.tf_buffer.lookup_transform(map_frame, self.get_parameter("world_frame").value, rclpy.time.Time())
+                self.tf_buffer.lookup_transform(
+                    map_frame, self.get_parameter("world_frame").value, rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=0.5),
+                )
             except Exception:
                 self.get_logger().warn("Planned tire: required map transform unavailable; cannot dispatch.")
                 self._mission_log_append(
@@ -1974,7 +1981,10 @@ class VehicleInspectionManager(Node):
             try:
                 wf = self.get_parameter("world_frame").value
                 bf = self.get_parameter("base_frame").value
-                self.tf_buffer.lookup_transform(wf, bf, rclpy.time.Time())
+                self.tf_buffer.lookup_transform(
+                    wf, bf, rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=0.5),
+                )
                 tf_valid = True
             except Exception:
                 pass
@@ -2347,7 +2357,10 @@ class VehicleInspectionManager(Node):
             tf_stable_s = self.get_parameter("tf_stable_s").value
             now_tf = time.time()
             try:
-                self.tf_buffer.lookup_transform(world_frame, base_frame, rclpy.time.Time())
+                self.tf_buffer.lookup_transform(
+                world_frame, base_frame, rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.5),
+            )
                 if self._tf_stable_since is None:
                     self._tf_stable_since = now_tf
                 stable_elapsed = now_tf - self._tf_stable_since
@@ -2400,7 +2413,10 @@ class VehicleInspectionManager(Node):
                 return
             if self.get_parameter("require_goal_transform").value:
                 try:
-                    self.tf_buffer.lookup_transform(map_frame, world_frame, rclpy.time.Time())
+                    self.tf_buffer.lookup_transform(
+                    map_frame, world_frame, rclpy.time.Time(),
+                    timeout=rclpy.duration.Duration(seconds=0.5),
+                )
                 except Exception:
                     if self._tf_wait_start_time is None:
                         self._tf_wait_start_time = time.time()

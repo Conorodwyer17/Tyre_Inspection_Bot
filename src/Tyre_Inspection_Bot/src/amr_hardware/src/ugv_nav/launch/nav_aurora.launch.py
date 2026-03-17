@@ -143,23 +143,8 @@ def generate_launch_description():
         parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time', default='false')}],
         condition=UnlessCondition(LaunchConfiguration('external_tf', default='false')),
     )
-    # Nav2 expects base_footprint; Aurora/URDF use base_link. Always needed (aurora_mock doesn't provide it).
-    base_footprint_tf = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='base_link_to_base_footprint',
-        arguments=[
-            '--x', '0',
-            '--y', '0',
-            '--z', '0',
-            '--yaw', '0',
-            '--pitch', '0',
-            '--roll', '0',
-            '--frame-id', 'base_link',
-            '--child-frame-id', 'base_footprint',
-        ],
-        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time', default='false')}],
-    )
+    # base_footprint->base_link from robot_state_publisher (ugv_rover.urdf) in aurora_bringup.
+    # No static base_footprint here to avoid TF cycle.
 
     # Delay Nav2 bringup so TF and services are ready (Aurora must publish map, odom, scan first).
     # When external_tf (use_mock): 5s so costmap builds TF buffer; else 15s for real Aurora.
@@ -268,7 +253,6 @@ def generate_launch_description():
     )
 
     ld.add_action(map_to_slamware_tf)
-    ld.add_action(base_footprint_tf)
     ld.add_action(cmd_vel_mux)
     ld.add_action(depth_gate)
     ld.add_action(vehicle_speed_filter)

@@ -272,6 +272,46 @@
       xyz="0 0 -1" />
   </joint>
   <!-- Note: Original 3D camera removed - Aurora provides camera functionality -->
+
+  <!-- SLAMTEC Aurora sensor frames (from Aurora SDK calibration; robot_state_publisher ensures correct timestamps)
+       Replaces static_transform_publisher nodes - fixes TF extrapolation errors in costmap layers.
+       NOTE: Aurora publishes slamware_map->laser and odom->base_link; do NOT add laser here (would conflict). -->
+  <!-- camera_left: 4.18cm forward, 3cm left; quat -0.5,0.5,-0.5,0.5 = rpy -1.5708 0 -1.5708 -->
+  <link name="camera_left">
+    <inertial><mass value="0.05"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <joint name="camera_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_left"/>
+    <origin xyz="0.0418 0.03 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <link name="camera_right">
+    <inertial><mass value="0.05"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <joint name="camera_right_joint" type="fixed">
+    <parent link="camera_left"/>
+    <child link="camera_right"/>
+    <origin xyz="0.06 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link">
+    <inertial><mass value="0.01"/><inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/></inertial>
+  </link>
+  <joint name="imu_joint_aurora" type="fixed">
+    <parent link="camera_left"/>
+    <child link="imu_link"/>
+    <origin xyz="0.03 0 0" rpy="0 0 -1.5708"/>  <!-- -90 deg Z per Aurora SDK -->
+  </joint>
+
+  <link name="camera_depth_optical_frame">
+    <inertial><mass value="0.001"/><inertia ixx="0.000001" ixy="0" ixz="0" iyy="0.000001" iyz="0" izz="0.000001"/></inertial>
+  </link>
+  <joint name="camera_depth_optical_joint" type="fixed">
+    <parent link="camera_left"/>
+    <child link="camera_depth_optical_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>  <!-- Identity: depth optical aligns with camera_left -->
+  </joint>
   
   <!-- Camera Holder: 2 inches (0.0508m) up from base, replacing LiDAR position -->
   <link

@@ -183,7 +183,7 @@ void SegmentationProcessor::segmentationCallback(const segmentation_msgs::msg::O
         
         transform = tf_buffer_->lookupTransform(
             working_frame_, closest_pointcloud_msg->header.frame_id,
-            lookup_time);
+            lookup_time, rclcpp::Duration::from_seconds(0.5));
 
         // TF age check (skip if clock sources differ, e.g. Aurora system time vs ROS time)
         try {
