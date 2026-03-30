@@ -28,7 +28,7 @@ ros2 launch sim vehicle_inspection_sim.launch.py use_mock:=true
 
 Note: `full_bringup.launch.py` does not fully support mock mode; it is intended for real hardware. Use `vehicle_inspection_sim.launch.py use_mock:=true` for simulation.
 
-**Detection:** Vehicle boxes come from **Aurora** only by default (YOLO vehicle node is off to save GPU/CPU). Tyre detection uses YOLO `best_fallback.pt` and, when you build it locally, TensorRT `best_fallback.engine`. To free disk after setup, run `./scripts/cleanup.sh` (dry run) or `./scripts/cleanup.sh --execute` to remove large temporary files and optional packages; see `docs/TIRE_DETECTION_TROUBLESHOOTING.md` if you keep a local copy under `docs/`.
+**Detection:** Vehicle boxes come from **Aurora** only by default (YOLO vehicle node is off to save GPU/CPU). Tyre detection uses YOLO `best_fallback.pt` and, when you build it locally, TensorRT `best_fallback.engine`. To free disk after setup, run `./scripts/cleanup.sh` (dry run) or `./scripts/cleanup.sh --execute` to remove large temporary files and optional packages. Perception tuning and TensorRT notes are in [RUNBOOK.md](RUNBOOK.md).
 
 ## Documentation
 
@@ -38,7 +38,7 @@ Note: `full_bringup.launch.py` does not fully support mock mode; it is intended 
 | [RUNBOOK.md](RUNBOOK.md) | Operations runbook, canonical stack, mission flow |
 | [SETUP.md](SETUP.md) | Fresh Jetson installation guide (JetPack 6.0, ROS 2, TensorRT) |
 
-Additional technical notes (troubleshooting, mission diagrams, benchmarks) may be kept locally under `docs/`; that directory is **not** part of the published repository.
+You may keep extra troubleshooting notes or figures under `docs/` next to the workspace if you use them during development.
 
 ## Installation
 
@@ -47,6 +47,6 @@ Additional technical notes (troubleshooting, mission diagrams, benchmarks) may b
 3. Install [SLAMTEC Aurora ROS 2 SDK](https://developer.slamtec.com/docs/slamware/aurora-ros2-sdk-en/) into `src/`.
 4. Install Python dependencies: `pip3 install -r requirements.txt` (see [SETUP.md](SETUP.md) for Jetson-specific PyTorch).
 5. Build: `colcon build --symlink-install && source install/setup.bash`
-6. Place `best_fallback.pt` (tyre weights) in `src/Tyre_Inspection_Bot/`. Generate **TensorRT** `.engine` and **ONNX** `.onnx` files locally; they are not tracked in Git. On Jetson, run `scripts/export_tensorrt.sh` for the engine and `scripts/export_onnx.sh` for CPU ONNX (see [RUNBOOK.md](RUNBOOK.md)). Dedicated mission weights in `tyre_detection_project/best.pt` follow the same pattern.
+6. Place `best_fallback.pt` (tyre weights) in `src/Tyre_Inspection_Bot/`. Generate **TensorRT** `.engine` and **ONNX** `.onnx` on the machine that runs inference (see [RUNBOOK.md](RUNBOOK.md)). On Jetson, run `scripts/export_tensorrt.sh` for the engine and `scripts/export_onnx.sh` for CPU ONNX. Dedicated mission weights in `tyre_detection_project/best.pt` follow the same pattern.
 
 See [SETUP.md](SETUP.md) for detailed Jetson installation and [RUNBOOK.md](RUNBOOK.md) for launch steps.
