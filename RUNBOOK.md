@@ -6,7 +6,7 @@
 - **Running a mission:** `./scripts/start_mission.sh` (recommended: disk check, Jetson performance, optional verification, then launch). **Default `MISSION_PROFILE=mission_dedicated_cpu`:** dedicated **`tyre_detection_project/best.pt`** on **CPU** (ONNX `best.onnx` at **480×480**), **real motor**, throttled depth (**2 Hz**), costmap **0.10 m**. Export ONNX if missing: `MODEL_PT=tyre_detection_project/best.pt IMGSZ=480 bash scripts/export_onnx.sh`. Stress / thesis: `MISSION_PROFILE=crash_fallback_seg`. Stub motor: `MISSION_PROFILE=stable_viz`. Or `./scripts/startup.sh`; mission auto-starts when TF and Nav2 are ready. See [Option A: Start mission](#option-a-start-mission-recommended) and [Remote RViz monitoring](#remote-rviz-monitoring-laptop).
 - **Canonical launch:** `full_bringup.launch.py` (e.g. via `scripts/mission_launch.sh` or `scripts/startup.sh`). For real missions on the Jetson, use this launch — it starts the Aurora SDK, motor driver, Nav2, perception, and inspection manager. On **memory-constrained** platforms (e.g. Jetson Orin Nano 8 GB), prefer **modular** `ugv_bringup` demos (`demo_*.launch.py`) for thesis or bench validation; see [Modular demonstration guide](#modular-demonstration-guide-thesis--constrained-jetson). Do not use `inspection_full_mission.launch.py` alone (it does not start the Aurora SDK by default).
 - **Simulation (no hardware):** Use `ros2 launch sim vehicle_inspection_sim.launch.py use_mock:=true` for full simulation with synthetic Aurora. Note: `full_bringup.launch.py` does not fully support mock mode; it is intended for real hardware.
-- **Mission node:** **inspection_manager_node**. Flow: IDLE → SEARCH_VEHICLE → WAIT_VEHICLE_BOX → (first goal = **nearest corner**, then tyres 2–4 by distance). See [MISSION_PIPELINE.md](docs/MISSION_PIPELINE.md) for tyre order and scenario behaviour.
+- **Mission node:** **inspection_manager_node**. Flow: IDLE → SEARCH_VEHICLE → WAIT_VEHICLE_BOX → (first goal = **nearest corner**, then tyres 2–4 by distance). See `docs/MISSION_PIPELINE.md` for tyre order and scenario behaviour.
 - **First goal:** Always the **nearest** of the four tire corners (not “front left first” or clockwise). Flow: WAIT_VEHICLE_BOX → APPROACH_VEHICLE → WAIT_TIRE_BOX → INSPECT_TIRE / FACE_TIRE → VERIFY_CAPTURE (repeat tires, then NEXT_VEHICLE or DONE).
 - **Vehicle boxes:** Primary `/aurora_semantic/vehicle_bounding_boxes`. YOLO vehicle node is **disabled by default** (`use_vehicle_yolo:=false`) to save GPU/CPU; use `use_vehicle_yolo:=true` for YOLO fallback (feasible on 16 GB Jetson as redundant detection source).
 - **Tyre boxes:** `/darknet_ros_3d/tire_bounding_boxes` (YOLO) and merged `/tire_bounding_boxes_merged` when PCL fallback enabled.
@@ -22,13 +22,13 @@
 - **Nav2 BT planner ID:** `ugv_nav/behavior_trees/navigate_to_pose_no_spin.xml` (and `navigate_through_poses_no_spin.xml`) set **`planner_id="SmacPlanner"`** to match `nav_aurora.yaml` `planner_plugins`. If you change the YAML back to GridBased/Navfn, set the BT **`planner_id`** to **`GridBased`** as well.
 - **Tyre 3D “stale” / skip logs:** If you see `tyre_3d WAIT_TIRE_BOX: skip direct goal (...)` in logs, the reason string explains it (e.g. stale, out of range). Message age uses `max(0, now−stamp)` so slightly future timestamps do not falsely mark data stale. Defaults: `tyre_3d_stale_s` **2.0**, range **0.4–5.0** m.
 - **Start mission:** With default `start_mission_on_ready: true`, the mission auto-starts when TF and Nav2 are ready. Otherwise publish once: `ros2 topic pub --once /inspection_manager/start_mission std_msgs/msg/Bool "{data: true}"`. Goals are in `map` frame; Aurora TF chain (map → slamware_map → odom → base_link) is required.
-- **Field readiness:** Pre-field checklist: [docs/ACCEPTANCE_CRITERIA.md](docs/ACCEPTANCE_CRITERIA.md). Mission report includes per-tire `goal_source` (`planned` / `detection` / `detection_refined`) for observability.
+- **Field readiness:** Pre-field checklist: `docs/ACCEPTANCE_CRITERIA.md`. Mission report includes per-tire `goal_source` (`planned` / `detection` / `detection_refined`) for observability.
 
 ---
 
 ## Planning test (stub motor, no motion)
 
-To **only validate goals and Nav2 plans in RViz** (no driving), see **[docs/PLANNING_TEST_STUB_MOTOR.md](docs/PLANNING_TEST_STUB_MOTOR.md)**. Quick command: `MISSION_PROFILE=stable_viz ./scripts/start_mission.sh --no-verify` (same CPU tyre stack as `mission_dedicated_cpu`, **`sim_no_move:=true`**).
+To **only validate goals and Nav2 plans in RViz** (no driving), see **`docs/PLANNING_TEST_STUB_MOTOR.md`**. Quick command: `MISSION_PROFILE=stable_viz ./scripts/start_mission.sh --no-verify` (same CPU tyre stack as `mission_dedicated_cpu`, **`sim_no_move:=true`**).
 
 ---
 
@@ -66,7 +66,7 @@ On a **second machine** with ROS 2 **Humble** (or compatible), on the **same LAN
 
 - **Vehicles:** Aurora built-in COCO80 semantic segmentation via `aurora_semantic_fusion` → `/aurora_semantic/vehicle_bounding_boxes`. With default `use_vehicle_yolo:=false`, the YOLO vehicle node is not launched; vehicle boxes come from Aurora only. Set `use_vehicle_yolo:=true` for YOLO fallback if needed.
 - **Tyres:** YOLO `best_fallback.pt`/`.engine` via `ultralytics_tire` + `segmentation_processor_tire` → `/darknet_ros_3d/tire_bounding_boxes`; merged with PCL fallback at `/tire_bounding_boxes_merged`. **16 GB Jetson:** GPU is default (`use_cpu_inference:=false`); 640×640 inference at 10 Hz; TensorRT when engine exists.
-- **Disk/GPU cleanup:** Run `bash scripts/cleanup.sh` for a dry run; `bash scripts/cleanup.sh --execute` to remove build artifacts. See [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md) for perception issues.
+- **Disk/GPU cleanup:** Run `bash scripts/cleanup.sh` for a dry run; `bash scripts/cleanup.sh --execute` to remove build artifacts. See `docs/TIRE_DETECTION_TROUBLESHOOTING.md` for perception issues.
 
 **Perception checklist (pre-mission):** (1) `interested_class_names` includes `wheel` (or configured tyre class) in ultralytics node; (2) segmentation_processor `interested_classes` includes `wheel` and SOR is enabled (config or launch); (3) tire_merger `yolo_stale_s` is set (default 2.0 s); (4) merged boxes use consistent frame_id (`slamware_map`); (5) ultralytics warm-up inference succeeds at startup; (6) TensorRT engine used when present (check logs for 'Using TensorRT engine for inspection').
 
@@ -121,14 +121,14 @@ These ensure the mission does not spin in circles, knows where it is and where i
 | **Lethal start / backup** | Before each **NavigateToPose** and **FollowWaypoints** dispatch, `escape_lethal_start_if_needed()` queries **`global_costmap/get_cost_global_costmap`** (footprint). If the robot is in **lethal** cost (≥ inscribed inflated), it performs a short **open-loop reverse** (params `pre_nav_lethal_*`), waits `post_capture_costmap_settle_s`, then retries. If still lethal, the goal is **not** sent (`pre_nav_lethal_refuse`). |
 | **After photo backup** | After a **verified** capture while more tyres remain on the vehicle, **`_post_capture_backup_sync()`** reverses briefly (`post_capture_backup_*`) so the next plan does not start from inside the vehicle inflation. |
 | **TF lost mid-mission** | TF watchdog: if TF is invalid for > `tf_watchdog_timeout` (0.2 s), we **cancel the in-flight Nav2 goal** so the robot stops; we pause ticks until TF is valid again. After `tf_unavailable_abort_s` (60 s) of continuous TF failure, transition to ERROR. |
-| **Recovery and watchdog** | Recovery: Nav2 behaviour tree runs ClearCostmap → Wait → BackUp on failure. Inspection manager tracks `number_of_recoveries`; after `max_recoveries_before_skip` (and still far from goal), the current tyre can be skipped (recovery-aware skip). No process-level auto-restart of nodes (optional future work). See [TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md). |
+| **Recovery and watchdog** | Recovery: Nav2 behaviour tree runs ClearCostmap → Wait → BackUp on failure. Inspection manager tracks `number_of_recoveries`; after `max_recoveries_before_skip` (and still far from goal), the current tyre can be skipped (recovery-aware skip). No process-level auto-restart of nodes (optional future work). See `docs/TIRE_DETECTION_TROUBLESHOOTING.md`. |
 | **Nav stuck** | If we stay in APPROACH_VEHICLE or INSPECT_TIRE longer than `approach_timeout_s` (120 s), we cancel the goal and return to WAIT_VEHICLE_BOX or WAIT_TIRE_BOX to retry or rotate. |
 | **Spin protection** | If the same “return” state (e.g. WAIT_VEHICLE_BOX after TURN_IN_PLACE_VEHICLE) is entered `max_state_repeats` (3) times in a row without progress, transition to ERROR. |
 | **Hard timeout** | Mission aborts to ERROR after `hard_mission_timeout` (1800 s). |
 | **Same DDS everywhere** | `full_bringup.launch.py` and `aurora_bringup.launch.py` set `RMW_IMPLEMENTATION=rmw_cyclonedds_cpp`; `startup.sh` also sets it. All nodes see the same TF and topics. |
 | **One goal at a time** | `send_nav_goal` refuses to send a new goal if one is already in flight. Nav2 replans the path dynamically as the costmap updates; we do **not** send new goals to "update" the path. |
 | **No goal flooding** | `nav_goal_min_interval_s` (1.0 s default) enforces a minimum delay between dispatches. Set to 0 to disable. Ensures the robot can respond before the next goal is sent. |
-| **All four tyres** | The mission plans **all four** tyre positions (both sides of the vehicle) at commit time. It only transitions to DONE/NEXT_VEHICLE when `expected_tires_per_vehicle` (4) are captured. Nav2 uses the full map and costmap to path **around** the vehicle to the far side. The mission never 'finishes' with only two tyres unless it goes to ERROR (e.g. spin protection). See [MISSION_PIPELINE.md](docs/MISSION_PIPELINE.md). |
+| **All four tyres** | The mission plans **all four** tyre positions (both sides of the vehicle) at commit time. It only transitions to DONE/NEXT_VEHICLE when `expected_tires_per_vehicle` (4) are captured. Nav2 uses the full map and costmap to path **around** the vehicle to the far side. The mission never 'finishes' with only two tyres unless it goes to ERROR (e.g. spin protection). See `docs/MISSION_PIPELINE.md`. |
 
 **Result:** The robot either completes the mission (detect → approach car → tires → photos) or fails into ERROR with a clear cause (TF, Nav2, timeout, spin protection). It does not spin indefinitely or “forget” where it’s going.
 
@@ -160,7 +160,7 @@ cd ~/ugv_ws && bash scripts/export_tensorrt.sh
 
 TensorRT is auto-enabled when `best_fallback.engine` exists at `~/ugv_ws/src/Tyre_Inspection_Bot/best_fallback.engine`. Default export: imgsz=640, workspace=8 GB for 16 GB Jetson. Override with `prefer_tensorrt_inspection:=false` if needed. If export fails, the node falls back to `.pt`. See `scripts/export_tensorrt.sh` for details.
 
-**CUDA OOM on startup:** Rare on 16 GB Jetson. If `ultralytics_tire` crashes with `NvMapMemAllocInternalTagged: error 12` or `Cuda Runtime (out of memory)` during TensorRT engine load, use one of: (1) `prefer_tensorrt_inspection:=false` to use PyTorch .pt (slower but avoids OOM); (2) `model_load_delay_s:=10.0` to delay model load so other nodes settle first (use decimal to avoid type mismatch); (3) export a smaller engine with `IMGSZ=320 WORKSPACE=4 ./scripts/export_tensorrt.sh`. See [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md).
+**CUDA OOM on startup:** Rare on 16 GB Jetson. If `ultralytics_tire` crashes with `NvMapMemAllocInternalTagged: error 12` or `Cuda Runtime (out of memory)` during TensorRT engine load, use one of: (1) `prefer_tensorrt_inspection:=false` to use PyTorch .pt (slower but avoids OOM); (2) `model_load_delay_s:=10.0` to delay model load so other nodes settle first (use decimal to avoid type mismatch); (3) export a smaller engine with `IMGSZ=320 WORKSPACE=4 ./scripts/export_tensorrt.sh`. See `docs/TIRE_DETECTION_TROUBLESHOOTING.md`.
 
 **PyTorch and CUDA verification:** Confirm CUDA is available:
 
@@ -220,7 +220,7 @@ Use this checklist when the new 16 GB Jetson arrives. See [SETUP.md](SETUP.md) f
 
 **Hardware integration (first-time / before real mission):** Verify: (1) Aurora reachable (`ping -c 1 192.168.11.1`), (2) motor port `/dev/ttyTHS1` present, (3) `LD_LIBRARY_PATH` includes Aurora SDK (add to `~/.bashrc` or use `startup.sh`/`start_mission.sh`), (4) workspace built, (5) tyre model present. Ensure `slamware_ros_sdk_server_node` logs "Connected to the selected device" when the stack starts.
 
-**Acceptance criteria:** See [ACCEPTANCE_CRITERIA.md](docs/ACCEPTANCE_CRITERIA.md) for real-robot validation.
+**Acceptance criteria:** See `docs/ACCEPTANCE_CRITERIA.md` for real-robot validation.
 
 ---
 
@@ -513,7 +513,7 @@ Logs are written to disk (no WiFi needed). **On each mission start**, any existi
 
 Configured via PRODUCTION_CONFIG: `mission_log_path`, `mission_report_path`. After reconnecting post-mission, copy `logs/` (or just `logs/archive/`) to review all runs.
 
-**Interpreting mission reports:** Open `mission_report_latest.json`. Key fields: `success` (true if all tires captured and no errors), `tires_captured` (should be 4), `tire_capture_log` (each entry has `goal_source`: planned / detection / detection_refined, plus image_path, distance_m, timestamp), `tire_goal_sources` (list of goal sources per tire), `failures` (empty if successful; otherwise lists reasons), `mission_duration_s`. See [docs/TESTING.md](docs/TESTING.md) for validation procedure.
+**Interpreting mission reports:** Open `mission_report_latest.json`. Key fields: `success` (true if all tires captured and no errors), `tires_captured` (should be 4), `tire_capture_log` (each entry has `goal_source`: planned / detection / detection_refined, plus image_path, distance_m, timestamp), `tire_goal_sources` (list of goal sources per tire), `failures` (empty if successful; otherwise lists reasons), `mission_duration_s`. See `docs/TESTING.md` for validation procedure.
 
 ---
 
@@ -673,7 +673,7 @@ ros2 service call /photo_capture_service/capture_photo std_srvs/srv/Trigger
 | Issue | Check | Fix |
 |-------|-------|-----|
 | No vehicles detected | Aurora semantic topics | Aurora 2.11 firmware; `ros2 topic echo /slamware_ros_sdk_server_node/semantic_labels --once`; check `detection_stream_stale` or `vehicle_boxes_stream_stale` in `logs/mission_latest.jsonl` |
-| No tires detected | best_fallback.pt, tire_label | Place best_fallback.pt in Tyre_Inspection_Bot; ultralytics_tire uses inspection mode. Run `ros2 run segmentation_3d print_inspection_model_classes`; set `tire_label: wheel` in PRODUCTION_CONFIG (best_fallback.pt id=22). See [docs/TIRE_DETECTION_TROUBLESHOOTING.md](docs/TIRE_DETECTION_TROUBLESHOOTING.md). |
+| No tires detected | best_fallback.pt, tire_label | Place best_fallback.pt in Tyre_Inspection_Bot; ultralytics_tire uses inspection mode. Run `ros2 run segmentation_3d print_inspection_model_classes`; set `tire_label: wheel` in PRODUCTION_CONFIG (best_fallback.pt id=22). See `docs/TIRE_DETECTION_TROUBLESHOOTING.md`. |
 | Nav2 lifecycle fails | DDS | `export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp` |
 | TF lookup failed | Aurora running | Start Aurora first; verify: `ros2 run tf2_ros tf2_echo slamware_map base_link` |
 | Mission spins / never leaves SEARCH_VEHICLE | TF or detection | Check `~/ugv_ws/logs/mission_latest.jsonl` for `tf_watchdog`; if present, TF chain is broken (Aurora not publishing odom→base_link). Fix Aurora connectivity, then re-run. |

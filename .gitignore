@@ -29,6 +29,13 @@ thesis/
 *.bak
 *.orig
 
+# Supplementary documentation (keep locally; not published)
+docs/
+
+# Internal readiness / review notes (keep locally; not published)
+FINAL_READINESS.md
+PRODUCTION_READINESS_FINAL.md
+
 # Simulation bags
 sim/bags/
 *.bag
